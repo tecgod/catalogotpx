@@ -314,7 +314,7 @@ function api(method,...args){
   if(TPX_PUBLIC_METHODS.has(method) && args.length===0){
     return apiJsonp(method,[]);
   }
-  if(method==='verifyPricePin'){
+  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin'){
     return apiJsonp(method,args);
   }
 
@@ -632,7 +632,7 @@ $('adminBtn').onclick=async()=>{
 async function submitAdminLogin(){
   const pin=$('adminPasswordInput').value;
   if(!pin){$('loginError').textContent='Digite a senha gerencial.';$('adminPasswordInput').focus();return;}
-  $('loginError').textContent='Validando acesso...';
+  $('loginError').textContent='Validando acesso gerencial...';
   $('confirmAdminLogin').disabled=true;
   try{
     if(!await api('verifyAdminPin',pin)){
