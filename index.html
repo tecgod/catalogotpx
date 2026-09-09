@@ -162,6 +162,14 @@ body.hide-prices .card .price::after{
   .op-btn{margin-left:0}
 }
 
+
+/* TPX: revelação individual de preço quando OP está ativo */
+body.hide-prices .card .price.price-revealed{visibility:visible}
+.price-access-btn{border:1px solid var(--line);background:#fff;color:var(--soft);padding:6px 9px;font-size:.72rem;cursor:pointer;align-self:center;white-space:nowrap}
+.price-access-btn:hover{border-color:var(--ink);color:var(--ink)}
+.price-hide-one{margin-left:7px;font-size:.68rem;padding:4px 7px}
+.price-login-product{font-family:Georgia,serif;font-size:1.05rem;margin:4px 0 14px;color:var(--ink)}
+
 </style>
 </head>
 <body>
@@ -229,6 +237,19 @@ body.hide-prices .card .price::after{
   <div class="restricted-note">A senha não é exibida em texto aberto. A validação é feita no servidor e a credencial é armazenada como hash no Apps Script.</div>
 </div></div>
 
+<div class="modal" id="priceLoginModal"><div class="dialog admin-login-dialog">
+  <div class="admin-lock" aria-hidden="true">🔒</div>
+  <h2>Consulta de Preço</h2>
+  <p class="admin-login-sub">Acesso rápido para revelar apenas o preço selecionado. Esta senha é independente da senha gerencial.</p>
+  <div class="price-login-product" id="priceLoginProduct"></div>
+  <div class="field" style="text-align:left"><label>Senha de consulta</label>
+    <div class="password-wrap"><input id="pricePasswordInput" type="password" autocomplete="off" placeholder="Digite a senha de consulta"><button class="password-toggle" id="pricePasswordToggle" type="button" title="Mostrar ou ocultar senha">👁</button></div>
+    <div class="login-error" id="priceLoginError"></div>
+  </div>
+  <div class="dialog-actions"><button class="btn" id="cancelPriceLogin">Cancelar</button><button class="btn primary" id="confirmPriceLogin">Mostrar este preço</button></div>
+  <div class="restricted-note">A senha de consulta é validada no Apps Script e não fica gravada no HTML público.</div>
+</div></div>
+
 <div class="modal" id="productModal"><div class="dialog">
 <h2 id="modalTitle">Produto</h2>
 <input type="hidden" id="editId">
@@ -272,6 +293,8 @@ const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Li
 let CATALOG=[], IMAGES={}, adminPin='', adminMode=false, showDetails=true;
 let activeType='Todos', activeCat='Todos', pendingImageKey=null;
 let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
+const revealedPriceIds = new Set();
+let pendingPriceProduct = null;
 
 const $=id=>document.getElementById(id);
 const money=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -494,8 +517,16 @@ function render(){
     card.appendChild(tw);
     const body=document.createElement('div'); body.style.display='contents';
     const safeFeatures=(p.features||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
-    body.innerHTML=`<h3 class="name">${escapeHtml(p.name)}${adminMode?`<span class="status-badge ${p.active===false?'hidden':'active'}">${p.active===false?'OCULTO':'ATIVO'}</span>`:''}</h3><div class="price">${money(p.price)}</div><div class="meta">${escapeHtml(p.type||'Outros')} • ${escapeHtml(p.cat||'Sem categoria')}${p.brand?' • '+escapeHtml(p.brand):''}</div>${showDetails?(safeFeatures?`<ul class="features">${safeFeatures}</ul>`:''):''}`;
+    const priceIsRevealed = !pricesHidden || revealedPriceIds.has(p.id);
+    const priceHtml = pricesHidden && !priceIsRevealed
+      ? `<button class="price-access-btn" type="button" data-price-id="${escapeHtml(p.id)}">Ver preço</button>`
+      : `<div class="price${pricesHidden?' price-revealed':''}">${money(p.price)}${pricesHidden?`<button class="btn price-hide-one" type="button" data-hide-price-id="${escapeHtml(p.id)}">Ocultar novamente</button>`:''}</div>`;
+    body.innerHTML=`<h3 class="name">${escapeHtml(p.name)}${adminMode?`<span class="status-badge ${p.active===false?'hidden':'active'}">${p.active===false?'OCULTO':'ATIVO'}</span>`:''}</h3>${priceHtml}<div class="meta">${escapeHtml(p.type||'Outros')} • ${escapeHtml(p.cat||'Sem categoria')}${p.brand?' • '+escapeHtml(p.brand):''}</div>${showDetails?(safeFeatures?`<ul class="features">${safeFeatures}</ul>`:''):''}`;
     card.appendChild(body);
+    const revealBtn=card.querySelector('[data-price-id]');
+    if(revealBtn) revealBtn.onclick=()=>openPriceLogin(p);
+    const hideOneBtn=card.querySelector('[data-hide-price-id]');
+    if(hideOneBtn) hideOneBtn.onclick=()=>{revealedPriceIds.delete(p.id);render();};
     if(adminMode){
       const a=document.createElement('div');a.className='admin-actions';
       const edit=document.createElement('button');edit.className='btn';edit.textContent='Editar produto';edit.onclick=()=>openProduct(p);
@@ -523,9 +554,51 @@ function applyPriceVisibility(){
 
 $('priceToggleBtn').onclick=()=>{
   pricesHidden=!pricesHidden;
+  revealedPriceIds.clear();
   localStorage.setItem('tpx_prices_hidden', pricesHidden ? '1' : '0');
   applyPriceVisibility();
+  render();
 };
+
+function openPriceLogin(product){
+  pendingPriceProduct=product;
+  $('priceLoginProduct').textContent=product.name;
+  $('priceLoginError').textContent='';
+  $('pricePasswordInput').value='';
+  $('pricePasswordInput').type='password';
+  $('pricePasswordToggle').textContent='👁';
+  $('priceLoginModal').classList.add('show');
+  setTimeout(()=>$('pricePasswordInput').focus(),50);
+}
+
+async function submitPriceLogin(){
+  if(!pendingPriceProduct)return;
+  const pin=$('pricePasswordInput').value;
+  if(!pin){$('priceLoginError').textContent='Digite a senha de consulta.';$('pricePasswordInput').focus();return;}
+  $('priceLoginError').textContent='Validando...';
+  $('confirmPriceLogin').disabled=true;
+  try{
+    if(!await api('verifyPricePin',pin)){
+      $('priceLoginError').textContent='Senha de consulta incorreta.';
+      $('pricePasswordInput').select();
+      return;
+    }
+    revealedPriceIds.add(pendingPriceProduct.id);
+    $('priceLoginModal').classList.remove('show');
+    pendingPriceProduct=null;
+    render();
+  }catch(e){
+    $('priceLoginError').textContent=e.message||'Não foi possível validar a senha.';
+  }finally{
+    $('confirmPriceLogin').disabled=false;
+  }
+}
+
+$('confirmPriceLogin').onclick=submitPriceLogin;
+$('cancelPriceLogin').onclick=()=>{$('priceLoginModal').classList.remove('show');$('pricePasswordInput').value='';$('priceLoginError').textContent='';pendingPriceProduct=null;};
+$('pricePasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitPriceLogin();});
+$('pricePasswordToggle').onclick=()=>{const i=$('pricePasswordInput');i.type=i.type==='password'?'text':'password';$('pricePasswordToggle').textContent=i.type==='password'?'👁':'🙈';i.focus();};
+$('priceLoginModal').addEventListener('click',e=>{if(e.target===$('priceLoginModal'))$('cancelPriceLogin').click();});
 
 $('searchInput').oninput=render; $('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
 $('clearPrice').onclick=()=>{$('minPrice').value='';$('maxPrice').value='';render();};
