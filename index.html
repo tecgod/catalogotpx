@@ -314,7 +314,7 @@ function api(method,...args){
   if(TPX_PUBLIC_METHODS.has(method) && args.length===0){
     return apiJsonp(method,[]);
   }
-  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin'){
+  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin' || method==='adminLogin'){
     return apiJsonp(method,args);
   }
 
@@ -635,15 +635,29 @@ async function submitAdminLogin(){
   $('loginError').textContent='Validando acesso gerencial...';
   $('confirmAdminLogin').disabled=true;
   try{
-    if(!await api('verifyAdminPin',pin)){
+    const login=await api('adminLogin',pin);
+    if(!login || login.valid!==true){
       $('loginError').textContent='Senha gerencial incorreta.';
       $('adminPasswordInput').select();
       return;
     }
-    adminPin=pin;adminMode=true;
+
+    adminPin=pin;
+    adminMode=true;
+    CATALOG=Array.isArray(login.catalog)?login.catalog:[];
     $('adminLoginModal').classList.remove('show');
-    $('adminBtn').textContent='Sair do gerenciamento';$('adminBtn').classList.add('active');$('addBtn').style.display='inline-block';$('securityBtn').style.display='inline-block';$('adminNote').classList.add('show');activeType='Todos';activeCat='Todos';
-    await loadAll(true);
+    $('adminBtn').textContent='Sair do gerenciamento';
+    $('adminBtn').classList.add('active');
+    $('addBtn').style.display='inline-block';
+    $('securityBtn').style.display='inline-block';
+    $('adminNote').classList.add('show');
+    activeType='Todos';
+    activeCat='Todos';
+    buildFilters();
+    render();
+    const ativos=CATALOG.filter(p=>p.active!==false).length;
+    const ocultos=CATALOG.filter(p=>p.active===false).length;
+    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
   }catch(e){adminMode=false;adminPin='';$('loginError').textContent='Não foi possível validar o acesso. '+e.message;}
   finally{$('confirmAdminLogin').disabled=false;}
 }
