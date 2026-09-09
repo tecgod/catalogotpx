@@ -132,6 +132,36 @@ header{display:flex;align-items:center;gap:18px;flex-wrap:nowrap}
 }
 
 
+
+/* TPX: botão discreto OP para ocultar/mostrar preços */
+.op-btn{
+  margin-left:auto;
+  width:34px;
+  height:34px;
+  padding:0;
+  border-radius:50%;
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  opacity:.72;
+}
+.op-btn:hover{opacity:1}
+.op-btn.active{
+  background:var(--ink);
+  color:#fff;
+  border-color:var(--ink);
+  opacity:1;
+}
+body.hide-prices .card .price{
+  visibility:hidden;
+}
+body.hide-prices .card .price::after{
+  content:'';
+}
+@media(max-width:650px){
+  .op-btn{margin-left:0}
+}
+
 </style>
 </head>
 <body>
@@ -163,6 +193,7 @@ header{display:flex;align-items:center;gap:18px;flex-wrap:nowrap}
 <div class="toolbar">
 <button class="btn" id="detailsBtn">Com detalhes</button>
 <button class="btn primary" id="adminBtn">Gerenciar catálogo</button>
+<button class="btn op-btn" id="priceToggleBtn" type="button" title="Ocultar ou mostrar preços">OP</button>
 <button class="btn" id="addBtn" style="display:none">+ Novo produto</button>
 <button class="btn" id="securityBtn" style="display:none">Backup e Segurança</button>
 </div>
@@ -240,6 +271,7 @@ const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Li
 
 let CATALOG=[], IMAGES={}, adminPin='', adminMode=false, showDetails=true;
 let activeType='Todos', activeCat='Todos', pendingImageKey=null;
+let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 
 const $=id=>document.getElementById(id);
 const money=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -478,6 +510,23 @@ function render(){
 
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
+
+function applyPriceVisibility(){
+  document.body.classList.toggle('hide-prices', pricesHidden);
+  const btn=$('priceToggleBtn');
+  if(btn){
+    btn.classList.toggle('active', pricesHidden);
+    btn.title=pricesHidden ? 'Mostrar preços' : 'Ocultar preços';
+    btn.setAttribute('aria-pressed', pricesHidden ? 'true' : 'false');
+  }
+}
+
+$('priceToggleBtn').onclick=()=>{
+  pricesHidden=!pricesHidden;
+  localStorage.setItem('tpx_prices_hidden', pricesHidden ? '1' : '0');
+  applyPriceVisibility();
+};
+
 $('searchInput').oninput=render; $('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
 $('clearPrice').onclick=()=>{$('minPrice').value='';$('maxPrice').value='';render();};
 $('detailsBtn').onclick=()=>{showDetails=!showDetails;$('detailsBtn').textContent=showDetails?'Com detalhes':'Sem detalhes';render();};
@@ -618,6 +667,7 @@ $('refreshSecurityBtn').onclick=refreshSecurity;
 $('createBackupBtn').onclick=async()=>{try{const b=await api('createBackup','MANUAL',adminPin);alert('Backup criado: '+b.name);await refreshSecurity();}catch(e){alert('Falha no backup: '+e.message)}};
 api('getSystemInfo').then(info=>{$('versionBadge').textContent='TPX Catálogo • v'+info.systemVersion+' • DB '+info.dbVersion;}).catch(()=>{});
 
+applyPriceVisibility();
 loadAll();
 </script>
 </body>
