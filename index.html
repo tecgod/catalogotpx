@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo Inteligente TPX Office</title>
+<style>
+:root{--bg:#f6f4f0;--panel:#fff;--ink:#201d1a;--soft:#6b645c;--line:#e5e0d8;--red:#a8121c;--red2:#7d0d15;--green:#246b45;}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif;min-height:100vh}
+.wrap{max-width:1080px;margin:auto;padding:32px 20px 70px}
+header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;border-bottom:2px solid var(--ink);padding-bottom:16px;flex-wrap:wrap}
+h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color:var(--soft);font-size:.82rem;line-height:1.5}
+.search{position:relative;margin-top:22px} .search input{width:100%;padding:15px 110px 15px 16px;font-size:1rem;border:2px solid var(--ink);background:#fff}
+.count{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--soft);font-size:.82rem}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0} button{font:inherit;cursor:pointer} .btn{border:1px solid var(--ink);background:#fff;padding:9px 13px} .btn.primary{background:var(--red);color:#fff;border-color:var(--red)} .btn.active{background:var(--ink);color:#fff}
+.filters-panel{background:#fff;border:1px solid var(--line);padding:14px;margin-bottom:14px}
+.filter-title{font-size:.78rem;color:var(--soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px} .chip{padding:7px 12px;border:1px solid var(--line);background:#fff;font-size:.82rem} .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.price-filter{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end} .field label{display:block;font-size:.75rem;color:var(--soft);margin-bottom:4px} .field input,.field select,.field textarea{width:100%;padding:10px;border:1px solid var(--line);background:#fff;font:inherit}
+.results{display:flex;flex-direction:column;gap:3px} .card{background:#fff;border:1px solid var(--line);padding:17px 20px;display:grid;grid-template-columns:92px 1fr auto;gap:4px 18px;align-items:start}
+.thumb-wrap{width:92px;height:92px;grid-row:1/4;position:relative} .thumb,.thumb-empty{width:92px;height:92px;border:1px solid var(--line);background:#f1efe9;object-fit:contain;padding:4px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.68rem;color:var(--soft)}
+.name{font-family:Georgia,serif;font-size:1.2rem;margin:0;align-self:center} .price{font-weight:700;color:var(--red2);white-space:nowrap;align-self:center} .meta{font-size:.7rem;color:var(--soft);text-transform:uppercase}
+.features{grid-column:2/-1;margin:8px 0 0;padding-left:18px;line-height:1.45;font-size:.9rem} .admin-actions{grid-column:2/-1;margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
+.admin-note{display:none;background:#fbeceb;border:1px solid var(--red);padding:9px 12px;margin:8px 0;font-size:.82rem} .admin-note.show{display:block}
+.card.hidden-product{opacity:.68;background:#f2f0eb}.status-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:3px 7px;border-radius:999px;margin-left:7px;vertical-align:middle}.status-badge.hidden{background:#ece6da;color:#7d0d15}.status-badge.active{background:#e9f5ed;color:#28613b}.btn.danger{border-color:#a8121c;color:#a8121c}.btn.danger:hover{background:#a8121c;color:#fff}.btn.success{border-color:#2f6d45;color:#2f6d45}.sync-error{color:#a8121c;font-weight:600}.sync-retry{display:none;margin-left:8px}.sync-retry.show{display:inline-block}
+.empty{background:#fff;border:1px solid var(--line);padding:50px;text-align:center;color:var(--soft)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:16px;z-index:50} .modal.show{display:flex} .dialog{background:#fff;width:min(680px,100%);max-height:92vh;overflow:auto;padding:20px;border-radius:4px}
+.dialog h2{margin-top:0;font-family:Georgia,serif;font-weight:400} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .dialog .field{margin-bottom:10px} .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.zoom{position:fixed;inset:0;background:rgba(15,15,15,.93);display:none;align-items:center;justify-content:center;z-index:60;padding:20px} .zoom.show{display:flex} .zoom img{max-width:100%;max-height:90vh;object-fit:contain} .zoom button{position:absolute;top:15px;right:20px;background:none;border:0;color:white;font-size:2rem}
+.status{font-size:.78rem;color:var(--soft);margin-left:auto}.version-badge{font-size:.72rem;color:var(--soft);margin-top:6px}.security-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.security-card{border:1px solid var(--line);padding:12px;background:#faf9f6}.security-card strong{display:block;margin-bottom:5px}.backup-list,.trash-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.backup-row,.trash-row{border:1px solid var(--line);padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center}.small{font-size:.76rem;color:var(--soft)}
+@media(max-width:650px){.security-grid{grid-template-columns:1fr}.card{grid-template-columns:72px 1fr} .thumb-wrap,.thumb,.thumb-empty{width:72px;height:72px} .price{grid-column:2} .features,.admin-actions{grid-column:1/-1} .price-filter,.grid2{grid-template-columns:1fr} header{align-items:flex-start}}
+
+.admin-login-dialog{width:min(420px,100%);text-align:center;padding:28px 24px;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.admin-lock{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;background:#fbeceb;color:var(--red);display:flex;align-items:center;justify-content:center;font-size:2rem;border:1px solid #efc8c8}
+.admin-login-dialog h2{margin:0 0 7px;font-family:Georgia,serif;font-weight:400}.admin-login-sub{color:var(--soft);font-size:.86rem;line-height:1.45;margin:0 0 18px}.password-wrap{position:relative}.password-wrap input{width:100%;padding:13px 46px 13px 14px;border:1px solid var(--line);font-size:1rem;letter-spacing:.08em}.password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:7px;color:var(--soft);font-size:1.05rem}.login-error{min-height:20px;color:var(--red);font-size:.8rem;margin-top:8px;text-align:left}.restricted-note{font-size:.72rem;color:var(--soft);margin-top:12px;line-height:1.4}
+
+
+.brand-header{position:relative;padding-left:92px;min-height:76px;display:flex;flex-direction:column;justify-content:center}
+.tpx-logo{position:absolute;left:0;top:50%;transform:translateY(-50%);width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 3px 12px rgba(0,0,0,.16)}
+.dev-footer{text-align:center;padding:26px 16px 8px;color:var(--soft);font-size:13px}
+@media(max-width:600px){
+  .brand-header{padding-left:68px;min-height:58px}
+  .tpx-logo{width:54px;height:54px}
+  .brand-header h1{font-size:1.25rem}
+}
+
+
+
+/* TPX: sincronização no canto direito, versão abaixo e barra de progresso */
+header{display:flex;align-items:center;gap:18px;flex-wrap:nowrap}
+.brand-header{flex:1;min-width:0}
+.header-meta{
+  margin-left:auto;
+  min-width:310px;
+  max-width:430px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:5px;
+}
+.sync-status-line{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-height:24px;
+}
+.header-meta #status{
+  margin:0;
+  display:block;
+  text-align:right;
+  font-size:.78rem;
+  color:var(--soft);
+}
+.header-meta #status.sync-error{color:var(--red);font-weight:600}
+.header-meta .version-badge{
+  margin:0;
+  text-align:right;
+  font-size:.72rem;
+  color:var(--soft);
+}
+.sync-progress-wrap{
+  width:100%;
+  margin-top:4px;
+  transition:opacity .2s ease;
+}
+.sync-progress-wrap.done{opacity:.82}
+.sync-progress-text{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  font-size:.7rem;
+  color:var(--soft);
+  margin-bottom:4px;
+}
+.sync-progress-text strong{
+  color:var(--ink);
+  font-size:.72rem;
+  min-width:34px;
+  text-align:right;
+}
+.sync-progress-track{
+  width:100%;
+  height:8px;
+  background:#e7e2da;
+  border-radius:999px;
+  overflow:hidden;
+  border:1px solid #ddd6cc;
+}
+.sync-progress-bar{
+  width:0%;
+  height:100%;
+  background:var(--green);
+  border-radius:999px;
+  transition:width .35s ease;
+}
+.sync-progress-wrap.error .sync-progress-bar{background:var(--red)}
+.sync-progress-wrap.complete .sync-progress-bar{background:var(--green)}
+@media(max-width:760px){
+  header{flex-wrap:wrap;align-items:flex-start}
+  .header-meta{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    margin-left:0;
+    padding-left:68px;
+  }
+  .sync-status-line{justify-content:flex-start;flex-wrap:wrap}
+  .header-meta #status,.header-meta .version-badge{text-align:left}
+}
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand-header"><img class="tpx-logo" src="data:image/png;base64,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" alt="Logo TPX Office"><div><h1>Catálogo Inteligente TPX Office</h1><div class="tag">Móveis Corporativos</div></div></div>
+
+  
+  <div class="header-meta">
+    <div class="sync-status-line">
+      <span id="status">Carregando catálogo...</span>
+      <button class="btn sync-retry" id="retrySync">Tentar novamente</button>
+    </div>
+    <div class="version-badge" id="versionBadge"></div>
+    <div class="sync-progress-wrap" id="syncProgressWrap" aria-live="polite">
+      <div class="sync-progress-text">
+        <span id="syncProgressMessage">Aguarde um pouco, sincronizando...</span>
+        <strong id="syncProgressPercent">0%</strong>
+      </div>
+      <div class="sync-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="syncProgressTrack">
+        <div class="sync-progress-bar" id="syncProgressBar"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="search"><input id="searchInput" placeholder="Buscar produto pelo nome..."><span class="count" id="count"></span></div>
+
+<div class="toolbar">
+<button class="btn" id="detailsBtn">Com detalhes</button>
+<button class="btn primary" id="adminBtn">Gerenciar catálogo</button>
+<button class="btn" id="addBtn" style="display:none">+ Novo produto</button>
+<button class="btn" id="securityBtn" style="display:none">Backup e Segurança</button>
+</div>
+<div class="admin-note" id="adminNote">Modo administrativo ativo. Produtos ocultos também aparecem aqui. Você pode editar, ocultar/reativar, excluir e trocar fotos.</div>
+
+<div class="filters-panel">
+<div class="filter-title">Tipo de produto</div>
+<div class="chips" id="typeChips"></div>
+<div class="filter-title">Linha / categoria</div>
+<div class="chips" id="categoryChips"></div>
+<div class="price-filter">
+<div class="field"><label>Preço mínimo</label><input id="minPrice" inputmode="decimal" placeholder="Ex.: 400"></div>
+<div class="field"><label>Preço máximo</label><input id="maxPrice" inputmode="decimal" placeholder="Ex.: 800"></div>
+<div class="field"><label>Ordenar por</label><select id="sortBy"><option value="name">Nome A-Z</option><option value="priceAsc">Menor preço</option><option value="priceDesc">Maior preço</option></select></div><button class="btn" id="clearPrice">Limpar preço</button>
+</div>
+</div>
+
+<div class="results" id="results"></div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" hidden>
+
+
+<div class="modal" id="adminLoginModal"><div class="dialog admin-login-dialog">
+  <div class="admin-lock" aria-hidden="true">🔐</div>
+  <h2>Acesso Gerencial TPX</h2>
+  <p class="admin-login-sub">Área restrita ao responsável autorizado pelo catálogo. Informe sua senha gerencial para editar produtos, preços, fotos e backups.</p>
+  <div class="field" style="text-align:left"><label>Senha gerencial</label>
+    <div class="password-wrap"><input id="adminPasswordInput" type="password" autocomplete="current-password" placeholder="Digite sua senha"><button class="password-toggle" id="passwordToggle" type="button" title="Mostrar ou ocultar senha">👁</button></div>
+    <div class="login-error" id="loginError"></div>
+  </div>
+  <div class="dialog-actions"><button class="btn" id="cancelAdminLogin">Cancelar</button><button class="btn primary" id="confirmAdminLogin">Entrar na área gerencial</button></div>
+  <div class="restricted-note">A senha não é exibida em texto aberto. A validação é feita no servidor e a credencial é armazenada como hash no Apps Script.</div>
+</div></div>
+
+<div class="modal" id="productModal"><div class="dialog">
+<h2 id="modalTitle">Produto</h2>
+<input type="hidden" id="editId">
+<div class="grid2">
+<div class="field"><label>Nome do produto</label><input id="fName"></div>
+<div class="field"><label>Preço (R$)</label><input id="fPrice" inputmode="decimal"></div>
+<div class="field"><label>Tipo</label><select id="fType"><option>Cadeiras</option><option>Mesas</option><option>Longarinas</option><option>Sofás</option><option>Armários</option><option>Outros</option></select></div>
+<div class="field"><label>Linha / categoria</label><input id="fCat" placeholder="Ex.: Linha Office"></div>
+<div class="field"><label>Marca</label><input id="fBrand" placeholder="Opcional"></div>
+<div class="field"><label>Chave da imagem</label><input id="fImg" placeholder="Gerada automaticamente"></div>
+</div>
+<div class="field"><label>Características, uma por linha</label><textarea id="fFeatures" rows="6"></textarea></div>
+<div class="dialog-actions"><button class="btn" id="cancelModal">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>
+</div></div>
+
+
+<div class="modal" id="securityModal"><div class="dialog">
+<h2>Backup e Segurança</h2>
+<div class="security-grid">
+<div class="security-card"><strong>Versão do sistema</strong><span id="sysVersion">...</span></div>
+<div class="security-card"><strong>Versão do banco</strong><span id="dbVersion">...</span></div>
+<div class="security-card"><strong>Último backup</strong><span id="lastBackup">Nenhum</span></div>
+</div>
+<div class="dialog-actions" style="justify-content:flex-start"><button class="btn primary" id="createBackupBtn">Criar backup agora</button><button class="btn" id="refreshSecurityBtn">Atualizar lista</button></div>
+<h3>Backups disponíveis</h3><div class="backup-list" id="backupList"></div>
+<h3>Lixeira</h3><div class="trash-list" id="trashList"></div>
+<div class="dialog-actions"><button class="btn" id="closeSecurityBtn">Fechar</button></div>
+</div></div>
+
+<div class="zoom" id="zoom"><button id="zoomClose">&times;</button><img id="zoomImg"></div>
+
+<script>
+/*
+  Cole abaixo a URL /exec da sua implantação do Google Apps Script.
+  Exemplo: https://script.google.com/macros/s/SEU_ID/exec
+*/
+const TPX_API_URL = 'https://script.google.com/macros/s/AKfycby89mCP-1ynAar7cccxMbWBlvDEvdjnewjoV-TXsOEP6qa4Bc_4ED-5VRd7ZpQ1ZcE6/exec';
+
+const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Linha Office", "img": "lo-unique-sem-braco", "features": ["Encosto em polipropileno", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-unique-sem-braco", "active": true}, {"name": "Unique com braço", "price": 799, "cat": "Linha Office", "img": "lo-unique-com-braco", "features": ["Encosto em polipropileno", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-unique-com-braco", "active": true}, {"name": "Goah Pop", "price": 1089, "cat": "Linha Office", "img": "lo-goah-pop", "features": ["Encosto em tela", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-goah-pop", "active": true}, {"name": "Fluid", "price": 1049, "cat": "Linha Office", "img": "lo-fluid", "features": ["Encosto em tela", "Ajuste de altura do assento", "Braço fixo", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-fluid", "active": true}, {"name": "Presidente Office", "price": 1099, "cat": "Linha Office", "img": "lo-presidente-office", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços fixos", "Mecanismo relax com trava", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-presidente-office", "active": true}, {"name": "Flip Light", "price": 1089, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-flip-light", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços reguláveis em altura", "Mecanismo fixo", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-flip-light", "active": true}, {"name": "Start NR17 Executiva", "price": 1290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-nr17-executiva", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-start-nr17-executiva", "active": true}, {"name": "Space Presidente", "price": 1099, "cat": "Linha Office", "img": "lo-space-presidente", "features": ["Ajuste de altura do assento", "Ajuste de altura de braço", "Encosto em tela", "Suporte de lombar ajustável", "Mecanismo relax", "Suporte de cabeça ajustável"], "type": "Cadeiras", "id": "lo-space-presidente", "active": true}, {"name": "Goah", "price": 1290, "cat": "Linha Office", "img": "lo-goah", "features": ["Ajuste da altura do assento", "Braços fixos", "Garantia de 6 anos"], "type": "Cadeiras", "id": "lo-goah", "active": true}, {"name": "Ergoplus Diretor", "price": 1390, "cat": "Linha Office", "img": "lo-ergoplus-diretor", "features": ["Ajuste de altura dos braços", "Ajuste de altura do assento", "Ajuste de altura do encosto", "Inclinação", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-ergoplus-diretor", "active": true}, {"name": "Start Presidente", "price": 1490, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-presidente", "features": ["Relax", "Regulagem de braço", "Regulagem de altura do assento"], "type": "Cadeiras", "id": "lo-start-presidente", "active": true}, {"name": "Spinal Diretor", "price": 1590, "cat": "Linha Office", "img": "lo-spinal-diretor", "features": ["Mecanismo sincronizado", "Base e braço em aço cromado", "Suporta até 150 kg", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-spinal-diretor", "active": true}, {"name": "TPX Diretor", "price": 1497, "cat": "Linha Office", "img": "lo-tpx-diretor", "features": ["Mecanismo Backsystem", "Ajuste de altura do assento", "Ajuste de altura do braço", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-tpx-diretor", "active": true}, {"name": "Ergonomy Diretor", "price": 1590, "cat": "Linha Office", "img": "lo-ergonomy-diretor", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Inclinação"], "type": "Cadeiras", "id": "lo-ergonomy-diretor", "active": true}, {"name": "Spinal Presidente", "price": 1690, "cat": "Linha Office", "img": "lo-spinal-presidente", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Inclinação"], "type": "Cadeiras", "id": "lo-spinal-presidente", "active": true}, {"name": "Confort Max Diretor", "price": 1699, "cat": "Linha Office", "img": "lo-confort-max-diretor", "features": ["Mecanismo sincronizado", "Assento com molas ensacadas", "Base e braço em aço cromado", "Suporta até 150 kg", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-confort-max-diretor", "active": true}, {"name": "Yon Diretor", "price": 1790, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-yon-diretor", "features": ["Mecanismo SRY NR17", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Garantia de 6 anos"], "type": "Cadeiras", "id": "lo-yon-diretor", "active": true}, {"name": "Ergonomy Presidente", "price": 1690, "cat": "Linha Office", "img": "lo-ergonomy-presidente", "features": ["Encosto em tela com apoio lombar regulável", "Apoio de cabeça fixo", "Regulagem de altura do assento", "Braços reguláveis em altura", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-ergonomy-presidente", "active": true}, {"name": "Confort Max Presidente", "price": 1799, "cat": "Linha Office", "img": "lo-confort-max-presidente", "features": ["Mecanismo sincronizado", "Base e braço em aço cromado", "Suporta até 150 kg", "Com apoio de cabeça", "Garantia de até 5 anos"], "type": "Cadeiras", "id": "lo-confort-max-presidente", "active": true}, {"name": "TPX Presidente", "price": 1989, "cat": "Linha Office", "img": "lo-tpx-presidente", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços reguláveis em altura", "Mecanismo com inclinação e ajuste de encosto", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-tpx-presidente", "active": true}, {"name": "Flip Sre", "price": 1790, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-flip-sre", "features": ["Encosto em tela", "Regulagem de altura do assento", "Encosto com regulagem de altura", "Mecanismo SRE (Sistema Reclinador do Encosto)", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-flip-sre", "active": true}, {"name": "Yon Presidente", "price": 1990, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-yon-presidente", "features": ["Encosto em tela com apoio lombar ajustável", "Apoio de cabeça regulável em altura e inclinação", "Regulagem de altura do assento", "Braços reguláveis em altura", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-yon-presidente", "active": true}, {"name": "Mais (cor preta)", "price": 1890, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-mais-preta", "features": ["Braços reguláveis", "Regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-mais-preta", "active": true}, {"name": "Poltrona Presidente", "price": 1890, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-poltrona-presidente", "features": ["Mecanismo sincronizado", "Assento com molas ensacadas", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-poltrona-presidente", "active": true}, {"name": "Slim SRE", "price": 1990, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-slim-sre", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo SRE"], "type": "Cadeiras", "id": "lo-slim-sre", "active": true}, {"name": "Mais (cor caramelo)", "price": 2150, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-mais-caramelo", "features": ["Braços reguláveis", "Regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-mais-caramelo", "active": true}, {"name": "Slim sycrom", "price": 2290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-slim-sycrom", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo sycrom"], "type": "Cadeiras", "id": "lo-slim-sycrom", "active": true}, {"name": "Ergon", "price": 2899, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-ergon", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Ajuste de profundidade do assento", "Base de alumínio"], "type": "Cadeiras", "id": "lo-ergon", "active": true}, {"name": "Start Extra", "price": 3690, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-extra", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo Syncron", "Suporta até 140 kg"], "type": "Cadeiras", "id": "lo-start-extra", "active": true}, {"name": "Artis", "price": 3997, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-artis", "features": ["Encosto em lâmina injetada em compósito polimérico", "Braço com ajuste de altura e regulagem lateral", "Mecanismo Syncron", "Ajuste de altura do assento"], "type": "Cadeiras", "id": "lo-artis", "active": true}, {"name": "Leef", "price": 5290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-leef", "features": ["Encosto com estrutura flexível", "Regulagem de altura do assento", "Braços reguláveis", "Mecanismo Syncron", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-leef", "active": true}, {"name": "Essence", "price": 6390, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-essence", "features": ["Encosto alto estofado", "Assento com regulagem de altura e profundidade", "Mecanismo Syncron", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-essence", "active": true}, {"name": "Aura", "price": 6199, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-aura", "features": ["Braço fixo", "Encosto em tela", "Mecanismo Syncron com regulagem automática da tensão", "Ajuste de altura do assento"], "type": "Cadeiras", "id": "lo-aura", "active": true}, {"name": "Bit", "price": 317, "cat": "Cadeiras Fixa", "img": "cf-bit", "features": ["Base em aço", "Assento em polipropileno", "Cores de metal: preto, branco, cinza", "Cores de polipropileno: preto, caramelo, laranja, azul-petróleo, verde, azul"], "type": "Cadeiras", "id": "cf-bit", "active": true}, {"name": "Croqui", "price": 429, "cat": "Cadeiras Fixa", "img": "cf-croqui", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi"], "type": "Cadeiras", "id": "cf-croqui", "active": true}, {"name": "Croqui acolchoada", "price": 489, "cat": "Cadeiras Fixa", "img": "cf-croqui-acolchoada", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi", "Assento acolchoado"], "type": "Cadeiras", "id": "cf-croqui-acolchoada", "active": true}, {"name": "Oxford", "price": 899, "cat": "Cadeiras Fixa", "img": "cf-oxford", "features": ["Revestimento em tecido ou couro ecológico (PU)", "Pés em aço", "Cores de couro: terracota, caramelo, preto"], "type": "Cadeiras", "id": "cf-oxford", "active": true}, {"name": "Chamonix", "price": 929, "cat": "Cadeiras Fixa", "img": "cf-chamonix", "features": ["Assento revestido em couro ecológico (PU)", "Base em aço carbono preto ou champagne", "Opções de cores de couro e metal"], "type": "Cadeiras", "id": "cf-chamonix", "active": true}, {"name": "Dinamarca", "price": 929, "cat": "Cadeiras Fixa", "img": "cf-dinamarca", "features": ["Revestimento em couro ecológico (PU)", "Pés em aço", "Cores de couro: caramelo, preto"], "type": "Cadeiras", "id": "cf-dinamarca", "active": true}, {"name": "Toulouse", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-toulouse", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi", "Disponível em 4 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-toulouse", "active": true}, {"name": "Firenze", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-firenze", "features": ["Revestimento em tecido ou couro ecológico (PU)", "Pés em aço", "Disponível em 7 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-firenze", "active": true}, {"name": "Napoli", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-napoli", "features": ["Tecido ou couro ecológico (PU)", "Pés em aço", "Disponível em 7 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-napoli", "active": true}, {"name": "Nevada", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-nevada", "features": ["Assento e encosto em tecido", "Pés em aço carbono", "Várias cores de couro e aço"], "type": "Cadeiras", "id": "cf-nevada", "active": true}, {"name": "Esteirinha Fixa", "price": 1190, "cat": "Cadeiras Fixa", "img": "cf-esteirinha-fixa", "features": ["Tecido ou couro ecológico (PU)", "Pés em aço", "Várias cores de couro"], "type": "Cadeiras", "id": "cf-esteirinha-fixa", "active": true}, {"name": "Prime Fixa", "price": 1390, "cat": "Cadeiras Fixa", "img": "cf-prime-fixa", "features": ["Encosto em tela", "Base fixa"], "type": "Cadeiras", "id": "cf-prime-fixa", "active": true}, {"name": "Kyoto", "price": 1397, "cat": "Cadeiras Fixa", "img": "cf-kyoto", "features": ["Assento revestido em tecido", "Base em aço carbono", "Assento giratório"], "type": "Cadeiras", "id": "cf-kyoto", "active": true}, {"name": "Ravena Fixa", "price": 1590, "cat": "Cadeiras Fixa", "img": "cf-ravena-fixa", "features": ["Capa removível estofada, sustentada por lona 100% poliéster de alta resistência", "Estrutura e braços em aço carbono cromado com apoio estofado"], "type": "Cadeiras", "id": "cf-ravena-fixa", "active": true}, {"name": "Poltrona Moma", "price": 1597, "cat": "Cadeiras Fixa", "img": "cf-poltrona-moma", "features": ["Assento e encosto em tecido", "Base em aço", "Disponível em 2 modelos"], "type": "Cadeiras", "id": "cf-poltrona-moma", "active": true}, {"name": "Eloise", "price": 1790, "cat": "Cadeiras Fixa", "img": "cf-eloise", "features": ["Assento e encosto em couro", "Base em aço", "Cores de couro: preto, branco"], "type": "Cadeiras", "id": "cf-eloise", "active": true}, {"name": "Inhotim", "price": 2147, "cat": "Cadeiras Fixa", "img": "cf-inhotim", "features": ["Tecido e/ou couro ecológico (PU)", "Base em aço carbono", "Disponível em 4 modelos"], "type": "Cadeiras", "id": "cf-inhotim", "active": true}, {"name": "Louvre", "price": 2597, "cat": "Cadeiras Fixa", "img": "cf-louvre", "features": ["Tecido e couro ecológico", "Base em aço", "Assento giratório", "Disponível em 2 modelos"], "type": "Cadeiras", "id": "cf-louvre", "active": true}, {"name": "Metropolitan", "price": 3497, "cat": "Cadeiras Fixa", "img": "cf-metropolitan", "features": ["Assento e encosto em couro", "Base em aço", "Assento giratório"], "type": "Cadeiras", "id": "cf-metropolitan", "active": true}, {"name": "Unique", "price": 599, "cat": "Cadeiras Caixa", "img": "cc-unique", "features": ["Encosto em polipropileno", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-unique", "active": true}, {"name": "Unique aro móvel", "price": 749, "cat": "Cadeiras Caixa", "img": "cc-unique-aro-movel", "features": ["Encosto em polipropileno", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-unique-aro-movel", "active": true}, {"name": "Executiva Caixa aro fixo", "price": 597, "cat": "Cadeiras Caixa", "img": "cc-executiva-caixa-aro-fixo", "features": ["Encosto acolchoado", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-executiva-caixa-aro-fixo", "active": true}, {"name": "Executiva Caixa aro móvel", "price": 747, "cat": "Cadeiras Caixa", "img": "cc-executiva-caixa-aro-movel", "features": ["Encosto acolchoado", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-executiva-caixa-aro-movel", "active": true}, {"name": "Executiva NR17 aro fixo", "price": 797, "cat": "Cadeiras Caixa", "img": "cc-executiva-nr17-aro-fixo", "features": ["Encosto acolchoado com ergonomia NR17", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-executiva-nr17-aro-fixo", "active": true}, {"name": "Executiva NR17 aro móvel", "price": 947, "cat": "Cadeiras Caixa", "img": "cc-executiva-nr17-aro-movel", "features": ["Encosto acolchoado com ergonomia NR17", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-executiva-nr17-aro-movel", "active": true}, {"name": "TPX aro fixo", "price": 1497, "cat": "Cadeiras Caixa", "img": "cc-tpx-aro-fixo", "features": ["Encosto em tela", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-tpx-aro-fixo", "active": true}, {"name": "TPX aro móvel", "price": 1547, "cat": "Cadeiras Caixa", "img": "cc-tpx-aro-movel", "features": ["Encosto em tela", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-tpx-aro-movel", "active": true}, {"name": "Sofá Spero", "price": 2947, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-spero", "features": [], "type": "Sofás", "id": "sf-sofa-spero", "active": true}, {"name": "Mesa Talk", "price": 797, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-mesa-talk", "features": [], "type": "Mesas", "id": "sf-mesa-talk", "active": true}, {"name": "Sofá Boldy Puff", "price": 1897, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy-puff", "features": [], "type": "Sofás", "id": "sf-sofa-boldy-puff", "active": true}, {"name": "Sofá Boldy Mesa", "price": 1697, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy-mesa", "features": [], "type": "Mesas", "id": "sf-sofa-boldy-mesa", "active": true}, {"name": "Bee Elíptica (Tecido)", "price": 2497, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-bee-eliptica", "features": [], "type": "Sofás", "id": "sf-bee-eliptica", "active": true}, {"name": "Bee Elíptica (Vinil)", "price": 3097, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-bee-eliptica", "features": [], "type": "Sofás", "id": "sf-bee-eliptica", "active": true}, {"name": "Sofá Boldy", "price": 4897, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy", "features": [], "type": "Sofás", "id": "sf-sofa-boldy", "active": true}, {"name": "Spot", "price": 2490, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-spot", "features": [], "type": "Sofás", "id": "sf-spot", "active": true}, {"name": "Spin", "price": 6597, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-spin", "features": [], "type": "Sofás", "id": "sf-spin", "active": true}];
+
+let CATALOG=[], IMAGES={}, adminPin='', adminMode=false, showDetails=true;
+let activeType='Todos', activeCat='Todos', pendingImageKey=null;
+
+const $=id=>document.getElementById(id);
+const money=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const normalize=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const slug=s=>normalize(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||('produto-'+Date.now());
+
+const TPX_PUBLIC_METHODS = new Set(['getCatalog','getImageMap','getSystemInfo','getCatalogStatus']);
+let TPX_REQUEST_SEQ = 0;
+
+function api(method,...args){
+  if(!TPX_API_URL || TPX_API_URL.includes('COLE_AQUI_')){
+    return Promise.reject(new Error('Configure a constante TPX_API_URL no index.html com a URL /exec do Apps Script.'));
+  }
+  return TPX_PUBLIC_METHODS.has(method) && args.length===0
+    ? apiJsonp(method)
+    : apiPost(method,args);
+}
+
+function apiJsonp(method){
+  return new Promise((resolve,reject)=>{
+    const callback='__tpx_jsonp_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      cleanup();
+      reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
+    },30000);
+
+    function cleanup(){
+      clearTimeout(timer);
+      try{delete window[callback]}catch(e){window[callback]=undefined}
+      if(script.parentNode)script.parentNode.removeChild(script);
+    }
+
+    window[callback]=payload=>{
+      cleanup();
+      if(payload && payload.ok===false) reject(new Error(payload.error||'Falha no servidor.'));
+      else resolve(payload && Object.prototype.hasOwnProperty.call(payload,'result') ? payload.result : payload);
+    };
+
+    const sep=TPX_API_URL.includes('?')?'&':'?';
+    script.src=TPX_API_URL+sep+'api=1&method='+encodeURIComponent(method)+'&callback='+encodeURIComponent(callback)+'&_='+Date.now();
+    script.onerror=()=>{
+      cleanup();
+      reject(new Error('Não foi possível conectar ao backend do catálogo.'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function apiPost(method,args){
+  return new Promise((resolve,reject)=>{
+    const requestId='tpx_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
+    const iframe=document.createElement('iframe');
+    iframe.name='tpx_post_'+requestId;
+    iframe.style.display='none';
+    const form=document.createElement('form');
+    form.method='POST';
+    form.action=TPX_API_URL;
+    form.target=iframe.name;
+    form.style.display='none';
+
+    function input(name,value){
+      const el=document.createElement('input');
+      el.type='hidden'; el.name=name; el.value=value;
+      form.appendChild(el);
+    }
+
+    input('requestId',requestId);
+    input('method',method);
+    input('args',JSON.stringify(args||[]));
+
+    const timer=setTimeout(()=>{
+      cleanup();
+      reject(new Error('Tempo esgotado ao executar a operação.'));
+    },60000);
+
+    function onMessage(ev){
+      const data=ev.data;
+      if(!data || data.source!=='TPX_APPS_SCRIPT' || data.requestId!==requestId)return;
+      cleanup();
+      const payload=data.payload;
+      if(payload && payload.ok===false) reject(new Error(payload.error||'Falha no servidor.'));
+      else resolve(payload && Object.prototype.hasOwnProperty.call(payload,'result') ? payload.result : payload);
+    }
+
+    function cleanup(){
+      clearTimeout(timer);
+      window.removeEventListener('message',onMessage);
+      setTimeout(()=>{
+        if(form.parentNode)form.parentNode.removeChild(form);
+        if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
+      },0);
+    }
+
+    window.addEventListener('message',onMessage);
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+    form.submit();
+  });
+}
+
+
+function setSyncProgress(percent,message,state='loading'){
+  const p=Math.max(0,Math.min(100,Number(percent)||0));
+  const wrap=$('syncProgressWrap');
+  const bar=$('syncProgressBar');
+  const pct=$('syncProgressPercent');
+  const msg=$('syncProgressMessage');
+  const track=$('syncProgressTrack');
+  if(!wrap||!bar||!pct||!msg||!track)return;
+  wrap.classList.remove('error','complete','done');
+  if(state==='error')wrap.classList.add('error');
+  if(state==='complete')wrap.classList.add('complete','done');
+  bar.style.width=p+'%';
+  pct.textContent=Math.round(p)+'%';
+  msg.textContent=message||'Aguarde um pouco, sincronizando...';
+  track.setAttribute('aria-valuenow',String(Math.round(p)));
+}
+
+async function loadAll(forceAdmin=false){
+  $('retrySync').classList.remove('show');
+  $('status').classList.remove('sync-error');
+  $('status').textContent='Sincronizando catálogo...';
+  setSyncProgress(8,'Aguarde um pouco, iniciando sincronização...');
+
+  try{
+    let completed=0;
+    const updateStage=(label)=>{
+      completed++;
+      if(completed===1) setSyncProgress(48,label+' carregado. Continuando...');
+      else if(completed===2) setSyncProgress(86,'Dados recebidos. Preparando catálogo...');
+    };
+
+    const catalogPromise=((adminMode||forceAdmin) ? api('getCatalogAdmin',adminPin) : api('getCatalog'))
+      .then(result=>{updateStage('Catálogo');return result;});
+
+    const imagesPromise=api('getImageMap')
+      .then(result=>{updateStage('Imagens');return result;});
+
+    const [cat,imgs]=await Promise.all([catalogPromise,imagesPromise]);
+
+    CATALOG=Array.isArray(cat)?cat:[];
+    IMAGES=imgs||{};
+
+    setSyncProgress(94,'Organizando produtos e filtros...');
+    buildFilters();
+    render();
+
+    const ativos=CATALOG.filter(p=>p.active!==false).length;
+    const ocultos=CATALOG.filter(p=>p.active===false).length;
+    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos${adminMode?' • '+ocultos+' ocultos':''}`;
+    setSyncProgress(100,'Sincronização concluída.', 'complete');
+  }catch(e){
+    console.error(e);
+    CATALOG=[]; IMAGES={};
+    $('status').classList.add('sync-error');
+    const msg=String(e.message||e);
+    $('status').textContent=msg.includes('PLANILHA_NAO_VINCULADA')
+      ? 'Planilha ainda não vinculada ao aplicativo. Execute “Configurar / reparar sistema” na planilha.'
+      : 'Erro ao sincronizar: '+msg;
+    $('retrySync').classList.add('show');
+    setSyncProgress(100,'Falha na sincronização. Tente novamente.', 'error');
+    buildFilters(); render();
+  }
+}
+
+$('retrySync').onclick=()=>loadAll(adminMode);
+
+function buildFilters(){
+  const types=['Todos',...new Set(CATALOG.filter(p=>adminMode||p.active!==false).map(p=>p.type||'Outros'))];
+  if(!types.includes(activeType)) activeType='Todos';
+  $('typeChips').innerHTML='';
+  types.forEach(v=>{
+    const b=document.createElement('button'); b.className='chip'+(v===activeType?' active':''); b.textContent=v;
+    b.onclick=()=>{activeType=v; activeCat='Todos'; buildFilters(); render();};
+    $('typeChips').appendChild(b);
+  });
+
+  const relevant=CATALOG.filter(p=>(adminMode||p.active!==false)&&(activeType==='Todos'||p.type===activeType));
+  const cats=['Todos',...new Set(relevant.map(p=>p.cat||'Sem categoria'))];
+  if(!cats.includes(activeCat)) activeCat='Todos';
+  $('categoryChips').innerHTML='';
+  cats.forEach(v=>{
+    const b=document.createElement('button'); b.className='chip'+(v===activeCat?' active':''); b.textContent=v;
+    b.onclick=()=>{activeCat=v; buildFilters(); render();};
+    $('categoryChips').appendChild(b);
+  });
+}
+
+function filtered(){
+  const q=normalize($('searchInput').value.trim());
+  const min=parseFloat(String($('minPrice').value).replace(',','.'));
+  const max=parseFloat(String($('maxPrice').value).replace(',','.'));
+  const list=CATALOG.filter(p=>{
+    if(!adminMode && p.active===false) return false;
+    if(activeType!=='Todos'&&(p.type||'Outros')!==activeType) return false;
+    if(activeCat!=='Todos'&&(p.cat||'Sem categoria')!==activeCat) return false;
+    if(q&&!normalize(p.name).includes(q)) return false;
+    if(!Number.isNaN(min)&&Number(p.price)<min) return false;
+    if(!Number.isNaN(max)&&Number(p.price)>max) return false;
+    return true;
+  });
+  const sort=$('sortBy').value;
+  if(sort==='priceAsc') list.sort((a,b)=>Number(a.price)-Number(b.price));
+  else if(sort==='priceDesc') list.sort((a,b)=>Number(b.price)-Number(a.price));
+  else list.sort((a,b)=>String(a.name).localeCompare(String(b.name),'pt-BR'));
+  return list;
+}
+
+function render(){
+  const list=filtered(); $('count').textContent=list.length+(list.length===1?' item':' itens');
+  const box=$('results'); box.innerHTML='';
+  if(!list.length){box.innerHTML='<div class="empty">Nenhum produto encontrado com os filtros selecionados.</div>';return;}
+  list.forEach(p=>{
+    const card=document.createElement('div'); card.className='card'+(p.active===false?' hidden-product':'');
+    const tw=document.createElement('div'); tw.className='thumb-wrap';
+    const src=IMAGES[p.img];
+    if(src){const im=document.createElement('img'); im.className='thumb'; im.src=src; im.alt=p.name; im.onclick=()=>{if(adminMode) choosePhoto(p); else openZoom(src)}; tw.appendChild(im);}
+    else{const ph=document.createElement('div');ph.className='thumb-empty';ph.textContent=adminMode?'Enviar foto':'Sem foto';ph.onclick=()=>{if(adminMode) choosePhoto(p)};tw.appendChild(ph);}
+    card.appendChild(tw);
+    const body=document.createElement('div'); body.style.display='contents';
+    const safeFeatures=(p.features||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+    body.innerHTML=`<h3 class="name">${escapeHtml(p.name)}${adminMode?`<span class="status-badge ${p.active===false?'hidden':'active'}">${p.active===false?'OCULTO':'ATIVO'}</span>`:''}</h3><div class="price">${money(p.price)}</div><div class="meta">${escapeHtml(p.type||'Outros')} • ${escapeHtml(p.cat||'Sem categoria')}${p.brand?' • '+escapeHtml(p.brand):''}</div>${showDetails?(safeFeatures?`<ul class="features">${safeFeatures}</ul>`:''):''}`;
+    card.appendChild(body);
+    if(adminMode){
+      const a=document.createElement('div');a.className='admin-actions';
+      const edit=document.createElement('button');edit.className='btn';edit.textContent='Editar produto';edit.onclick=()=>openProduct(p);
+      const photo=document.createElement('button');photo.className='btn';photo.textContent=src?'Trocar foto':'Cadastrar foto';photo.onclick=()=>choosePhoto(p);
+      const toggle=document.createElement('button');toggle.className='btn '+(p.active===false?'success':'');toggle.textContent=p.active===false?'Reativar':'Ocultar';toggle.onclick=()=>toggleProduct(p);
+      const del=document.createElement('button');del.className='btn danger';del.textContent='Excluir';del.onclick=()=>deleteProductForever(p);
+      a.append(edit,photo,toggle,del); card.appendChild(a);
+    }
+    box.appendChild(card);
+  });
+}
+
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+$('searchInput').oninput=render; $('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
+$('clearPrice').onclick=()=>{$('minPrice').value='';$('maxPrice').value='';render();};
+$('detailsBtn').onclick=()=>{showDetails=!showDetails;$('detailsBtn').textContent=showDetails?'Com detalhes':'Sem detalhes';render();};
+
+$('adminBtn').onclick=async()=>{
+  if(adminMode){
+    adminMode=false;adminPin='';$('adminBtn').textContent='Gerenciar catálogo';$('adminBtn').classList.remove('active');$('addBtn').style.display='none';$('securityBtn').style.display='none';$('adminNote').classList.remove('show');activeType='Todos';activeCat='Todos';
+    await loadAll(false); return;
+  }
+  $('loginError').textContent='';
+  $('adminPasswordInput').value='';
+  $('adminPasswordInput').type='password';
+  $('adminLoginModal').classList.add('show');
+  setTimeout(()=>$('adminPasswordInput').focus(),50);
+};
+
+async function submitAdminLogin(){
+  const pin=$('adminPasswordInput').value;
+  if(!pin){$('loginError').textContent='Digite a senha gerencial.';$('adminPasswordInput').focus();return;}
+  $('loginError').textContent='Validando acesso...';
+  $('confirmAdminLogin').disabled=true;
+  try{
+    if(!await api('verifyAdminPin',pin)){
+      $('loginError').textContent='Senha gerencial incorreta.';
+      $('adminPasswordInput').select();
+      return;
+    }
+    adminPin=pin;adminMode=true;
+    $('adminLoginModal').classList.remove('show');
+    $('adminBtn').textContent='Sair do gerenciamento';$('adminBtn').classList.add('active');$('addBtn').style.display='inline-block';$('securityBtn').style.display='inline-block';$('adminNote').classList.add('show');activeType='Todos';activeCat='Todos';
+    await loadAll(true);
+  }catch(e){adminMode=false;adminPin='';$('loginError').textContent='Não foi possível validar o acesso. '+e.message;}
+  finally{$('confirmAdminLogin').disabled=false;}
+}
+$('confirmAdminLogin').onclick=submitAdminLogin;
+$('cancelAdminLogin').onclick=()=>{$('adminLoginModal').classList.remove('show');$('adminPasswordInput').value='';$('loginError').textContent='';};
+$('adminPasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitAdminLogin();});
+$('passwordToggle').onclick=()=>{const i=$('adminPasswordInput');i.type=i.type==='password'?'text':'password';$('passwordToggle').textContent=i.type==='password'?'👁':'🙈';i.focus();};
+$('adminLoginModal').addEventListener('click',e=>{if(e.target===$('adminLoginModal'))$('cancelAdminLogin').click();});
+
+$('addBtn').onclick=()=>openProduct(null);
+function openProduct(p){
+  $('modalTitle').textContent=p?'Editar produto':'Novo produto'; $('editId').value=p?.id||'';
+  $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fType').value=p?.type||'Cadeiras';
+  $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; $('fFeatures').value=(p?.features||[]).join('\n');
+  $('productModal').classList.add('show');
+}
+$('cancelModal').onclick=()=>$('productModal').classList.remove('show');
+
+$('saveProductBtn').onclick=async()=>{
+  const name=$('fName').value.trim(); const price=parseFloat(String($('fPrice').value).replace(',','.'));
+  if(!name)return alert('Informe o nome do produto.'); if(Number.isNaN(price)||price<0)return alert('Informe um preço válido.');
+  const id=$('editId').value||slug(name)+'-'+Date.now().toString().slice(-5);
+  const old=CATALOG.find(x=>x.id===id);
+  const product={id,name,price,type:$('fType').value,cat:$('fCat').value.trim()||'Sem categoria',brand:$('fBrand').value.trim(),img:$('fImg').value.trim()||old?.img||slug(name)+'-'+Date.now().toString().slice(-5),features:$('fFeatures').value.split('\n').map(x=>x.trim()).filter(Boolean),active:old?old.active!==false:true};
+  try{
+    const saved=await api('saveProduct',product,adminPin);
+    const i=CATALOG.findIndex(x=>x.id===saved.id); if(i>=0)CATALOG[i]=saved;else CATALOG.push(saved);
+    $('productModal').classList.remove('show');buildFilters();render();alert('Produto salvo com sucesso.');
+  }catch(e){alert('Não foi possível salvar. '+e.message);}
+};
+
+async function toggleProduct(p){
+  const next=p.active===false;
+  const action=next?'reativar':'ocultar';
+  if(!confirm(`${next?'Reativar':'Ocultar'} “${p.name}”? ${next?'Ele voltará a aparecer no catálogo público.':'Ele deixará de aparecer no catálogo público, mas continuará salvo na planilha.'}`))return;
+  try{
+    const updated=await api('setProductActive',p.id,next,adminPin);
+    const i=CATALOG.findIndex(x=>x.id===p.id); if(i>=0)CATALOG[i]=updated;
+    buildFilters();render();
+  }catch(e){alert(`Não foi possível ${action} o produto. `+e.message);}
+}
+
+async function deleteProductForever(p){
+  const ok=confirm(`MOVER PARA A LIXEIRA
+
+Deseja excluir “${p.name}”?
+
+O produto sairá do catálogo e poderá ser restaurado pela área Backup e Segurança. Para falta temporária, prefira “Ocultar”.`);
+  if(!ok)return;
+  try{
+    await api('deleteProductPermanent',p.id,adminPin);
+    CATALOG=CATALOG.filter(x=>x.id!==p.id);
+    buildFilters();render();
+    alert('Produto movido para a lixeira.');
+  }catch(e){alert('Não foi possível excluir. '+e.message);}
+}
+
+function choosePhoto(p){pendingImageKey=p.img;$('fileInput').click();}
+$('fileInput').onchange=async e=>{
+  const file=e.target.files[0]; if(!file||!pendingImageKey)return;
+  try{const dataUrl=await optimized(file);const result=await api('saveProductImage',pendingImageKey,file.name,dataUrl,adminPin);IMAGES[pendingImageKey]=result.url+'&t='+Date.now();render();}
+  catch(err){alert('Não foi possível salvar a foto. '+err.message);}
+  finally{pendingImageKey=null;e.target.value='';}
+};
+function optimized(file,max=1600,q=.88){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('Falha ao ler imagem'));r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('Imagem inválida'));im.onload=()=>{const sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q));};im.src=r.result;};r.readAsDataURL(file);});}
+
+function openZoom(src){$('zoomImg').src=src;$('zoom').classList.add('show');} $('zoomClose').onclick=()=>$('zoom').classList.remove('show'); $('zoom').onclick=e=>{if(e.target===$('zoom'))$('zoom').classList.remove('show');};
+
+
+async function openSecurity(){
+  $('securityModal').classList.add('show'); await refreshSecurity();
+}
+async function refreshSecurity(){
+  try{
+    const [info,backs,trash]=await Promise.all([api('getSystemInfo',adminPin),api('listBackups',adminPin),api('getTrash',adminPin)]);
+    $('sysVersion').textContent='v'+info.systemVersion; $('dbVersion').textContent='DB '+info.dbVersion;
+    $('versionBadge').textContent='TPX Catálogo • v'+info.systemVersion+' • DB '+info.dbVersion;
+    $('lastBackup').textContent=info.lastBackup ? new Date(info.lastBackup.createdAt).toLocaleString('pt-BR') : 'Nenhum';
+    $('backupList').innerHTML='';
+    if(!backs.length) $('backupList').innerHTML='<div class="small">Nenhum backup criado ainda.</div>';
+    backs.forEach(b=>{
+      const row=document.createElement('div');row.className='backup-row';
+      const left=document.createElement('div'); left.innerHTML=`<strong>${escapeHtml(b.name)}</strong><div class="small">${new Date(b.createdAt).toLocaleString('pt-BR')} • Sistema ${escapeHtml(b.systemVersion)} • DB ${escapeHtml(b.dbVersion)} • ${escapeHtml(b.type)} • ${b.compatible?'✓ Compatível':'⚠ Incompatível'}</div>`;
+      const btn=document.createElement('button');btn.className='btn';btn.textContent='Restaurar';btn.disabled=!b.compatible;btn.onclick=()=>restoreBackupUI(b);
+      row.append(left,btn);$('backupList').appendChild(row);
+    });
+    $('trashList').innerHTML='';
+    if(!trash.length) $('trashList').innerHTML='<div class="small">Lixeira vazia.</div>';
+    trash.forEach(t=>{
+      const row=document.createElement('div');row.className='trash-row';
+      const left=document.createElement('div');left.innerHTML=`<strong>${escapeHtml(t.product.name)}</strong><div class="small">Excluído em ${new Date(t.deletedAt).toLocaleString('pt-BR')}</div>`;
+      const acts=document.createElement('div');
+      const r=document.createElement('button');r.className='btn success';r.textContent='Restaurar';r.onclick=async()=>{try{await api('restoreTrashProduct',t.product.id,adminPin);await loadAll(true);await refreshSecurity();}catch(e){alert(e.message)}};
+      const d=document.createElement('button');d.className='btn danger';d.textContent='Excluir definitivamente';d.onclick=async()=>{if(!confirm('Excluir definitivamente “'+t.product.name+'”? Esta ação não poderá ser desfeita pela lixeira.'))return;try{await api('purgeTrashProduct',t.product.id,adminPin);await refreshSecurity();}catch(e){alert(e.message)}};
+      acts.append(r,d);row.append(left,acts);$('trashList').appendChild(row);
+    });
+  }catch(e){alert('Falha ao carregar segurança: '+e.message);}
+}
+async function restoreBackupUI(b){
+  if(!b.compatible)return alert('Este backup usa outra versão do banco e não pode ser restaurado diretamente.');
+  if(!confirm(`Restaurar o backup ${b.name}?\n\nAntes da restauração, o sistema criará automaticamente um backup PRE_RESTAURACAO do estado atual.`))return;
+  try{await api('restoreBackup',b.id,adminPin);alert('Backup restaurado com sucesso.');await loadAll(true);await refreshSecurity();}catch(e){alert('Restauração bloqueada: '+e.message);}
+}
+$('securityBtn').onclick=openSecurity;
+$('closeSecurityBtn').onclick=()=>$('securityModal').classList.remove('show');
+$('refreshSecurityBtn').onclick=refreshSecurity;
+$('createBackupBtn').onclick=async()=>{try{const b=await api('createBackup','MANUAL',adminPin);alert('Backup criado: '+b.name);await refreshSecurity();}catch(e){alert('Falha no backup: '+e.message)}};
+api('getSystemInfo').then(info=>{$('versionBadge').textContent='TPX Catálogo • v'+info.systemVersion+' • DB '+info.dbVersion;}).catch(()=>{});
+
+loadAll();
+</script>
+</body>
+</html>
