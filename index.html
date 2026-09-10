@@ -589,7 +589,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>O botão “Gerenciar catálogo” abre o acesso restrito. Após autenticação, é possível cadastrar produtos, alterar nome, preço, tipo, categoria, marca, características, classificação de NRs, confiança ergonômica e status da análise.</p>
 
     <h3>8. Fotos e vídeos</h3>
-    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. O vídeo pode estar no Google Drive, YouTube ou em um arquivo MP4 hospedado na internet. Ao salvar o produto, os dados e o link do vídeo são gravados juntos em uma única operação. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. O vídeo só é carregado quando esse botão é acionado, preservando a velocidade do catálogo. No modal do vídeo há opções para abrir, compartilhar/copiar o link e, quando a origem permite, baixar o arquivo.</p>
+    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. O vídeo pode estar no Google Drive, YouTube ou em um arquivo MP4 hospedado na internet. Ao salvar o produto, os dados e o link do vídeo são gravados juntos em uma única operação. O sistema possui confirmação redundante do salvamento para evitar a falsa mensagem de tempo esgotado quando o servidor conclui a gravação, mas o navegador perde a resposta. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. O vídeo só é carregado quando esse botão é acionado, preservando a velocidade do catálogo.</p>
 
     <h3>9. Ocultar, reativar e excluir</h3>
     <p>Produtos podem ser ocultados sem exclusão definitiva. Produtos enviados à lixeira podem ser restaurados ou excluídos definitivamente pela área de Backup e Segurança.</p>
@@ -694,7 +694,7 @@ let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
-const TPX_FRONTEND_VERSION='1.4.4';
+const TPX_FRONTEND_VERSION='1.4.5';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -790,8 +790,12 @@ function api(method,...args){
   if(TPX_PUBLIC_METHODS.has(method) && args.length===0){
     return apiJsonp(method,[]);
   }
-  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin' || method==='adminLogin'){
+  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin' || method==='adminLogin' || method==='getOperationStatus'){
     return apiJsonp(method,args);
+  }
+
+  if(method==='saveProductWithVideo'){
+    return apiPostConfirmed(method,args);
   }
 
   return apiPost(method,args);
@@ -837,6 +841,129 @@ function apiJsonp(method,args=[]){
       reject(new Error('Não foi possível conectar ao backend do catálogo.'));
     };
     document.head.appendChild(script);
+  });
+}
+
+function makeOperationId(){
+  try{
+    if(window.crypto && typeof window.crypto.randomUUID==='function'){
+      return 'op_'+window.crypto.randomUUID().replace(/-/g,'');
+    }
+    if(window.crypto && typeof window.crypto.getRandomValues==='function'){
+      const bytes=new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      return 'op_'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(e){}
+  return 'op_'+Date.now()+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+}
+
+function apiPostConfirmed(method,args){
+  return new Promise((resolve,reject)=>{
+    const requestId='tpx_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
+    const operationId=makeOperationId();
+    const iframe=document.createElement('iframe');
+    iframe.name='tpx_post_'+requestId;
+    iframe.style.display='none';
+
+    const form=document.createElement('form');
+    form.method='POST';
+    form.action=TPX_API_URL;
+    form.target=iframe.name;
+    form.style.display='none';
+
+    function input(name,value){
+      const el=document.createElement('input');
+      el.type='hidden';
+      el.name=name;
+      el.value=value;
+      form.appendChild(el);
+    }
+
+    input('requestId',requestId);
+    input('operationId',operationId);
+    input('method',method);
+    input('args',JSON.stringify(args||[]));
+
+    let settled=false;
+    let pollTimer=null;
+    const startedAt=Date.now();
+    const maxWaitMs=45000;
+
+    function cleanup(){
+      if(pollTimer) clearTimeout(pollTimer);
+      window.removeEventListener('message',onMessage);
+      setTimeout(()=>{
+        if(form.parentNode) form.parentNode.removeChild(form);
+        if(iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      },0);
+    }
+
+    function finishFromPayload(payload){
+      if(settled) return;
+      settled=true;
+      cleanup();
+
+      if(payload && payload.ok===false){
+        reject(new Error(payload.error||'Falha no servidor.'));
+        return;
+      }
+
+      resolve(
+        payload && Object.prototype.hasOwnProperty.call(payload,'result')
+          ? payload.result
+          : payload
+      );
+    }
+
+    function fail(err){
+      if(settled) return;
+      settled=true;
+      cleanup();
+      reject(err instanceof Error ? err : new Error(String(err||'Falha na operação.')));
+    }
+
+    function onMessage(ev){
+      const data=ev.data;
+      if(!data || data.source!=='TPX_APPS_SCRIPT' || data.requestId!==requestId) return;
+      finishFromPayload(data.payload);
+    }
+
+    async function pollReceipt(){
+      if(settled) return;
+
+      try{
+        const status=await apiJsonp('getOperationStatus',[operationId]);
+
+        if(status && status.state==='done'){
+          finishFromPayload(status.payload);
+          return;
+        }
+
+        if(status && status.state==='error'){
+          const payload=status.payload||{};
+          fail(new Error(payload.error||'Não foi possível concluir a gravação.'));
+          return;
+        }
+      }catch(e){
+        // A confirmação por JSONP é uma contingência.
+        // Se esta consulta pontual falhar, tenta novamente sem duplicar a gravação.
+      }
+
+      if(Date.now()-startedAt>=maxWaitMs){
+        fail(new Error('A gravação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
+        return;
+      }
+
+      pollTimer=setTimeout(pollReceipt,850);
+    }
+
+    window.addEventListener('message',onMessage);
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+
+    form.submit();
+    pollTimer=setTimeout(pollReceipt,700);
   });
 }
 
@@ -1849,7 +1976,58 @@ $('saveProductBtn').onclick=async()=>{
     render();
     alert(videoUrl?'Produto e vídeo salvos com sucesso.':'Produto salvo com sucesso.');
   }catch(e){
-    alert('Não foi possível salvar. '+e.message);
+    // Última verificação de segurança:
+    // se a gravação ocorreu, mas a confirmação de rede também falhou,
+    // confirma pelos dados já gravados sem repetir o POST.
+    let verified=false;
+
+    try{
+      const [catalogCheck,videoCheck]=await Promise.all([
+        apiJsonp('getCatalogAdmin',[adminPin]),
+        apiJsonp('getVideoMap',[])
+      ]);
+
+      const savedCheck=Array.isArray(catalogCheck)
+        ? catalogCheck.find(x=>x.id===product.id)
+        : null;
+
+      const normalizedExpectedVideo=videoUrl.trim();
+      const actualVideo=videoCheck && videoCheck[product.id]
+        ? String(videoCheck[product.id]).trim()
+        : '';
+
+      const sameProduct=!!savedCheck
+        && String(savedCheck.name||'')===String(product.name||'')
+        && Number(savedCheck.price)===Number(product.price)
+        && String(savedCheck.type||'')===String(product.type||'')
+        && String(savedCheck.cat||'')===String(product.cat||'')
+        && String(savedCheck.brand||'')===String(product.brand||'');
+
+      const sameVideo=actualVideo===normalizedExpectedVideo;
+
+      if(sameProduct && sameVideo){
+        verified=true;
+
+        if(actualVideo) VIDEOS[product.id]=actualVideo;
+        else delete VIDEOS[product.id];
+
+        const i=CATALOG.findIndex(x=>x.id===product.id);
+        if(i>=0) CATALOG[i]=savedCheck;
+        else CATALOG.push(savedCheck);
+
+        saveCachedVideoMap(VIDEOS);
+        $('productModal').classList.remove('show');
+        buildFilters();
+        render();
+        alert(videoUrl?'Produto e vídeo salvos com sucesso.':'Produto salvo com sucesso.');
+      }
+    }catch(confirmErr){
+      console.warn('Não foi possível verificar a gravação após falha de confirmação:',confirmErr);
+    }
+
+    if(!verified){
+      alert('Não foi possível confirmar o salvamento. '+e.message);
+    }
   }finally{
     btn.disabled=false;
     btn.textContent=originalText;
