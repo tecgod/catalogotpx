@@ -188,6 +188,22 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .ergo-none{background:#e5e7eb;color:#374151}
 .ergo-status{background:#eef2ff;color:#3730a3}
 
+
+.multi-search-wrap{align-items:flex-start}
+.search-suggestions{
+  position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:50;
+  display:none;max-height:260px;overflow:auto;background:#fff;
+  border:1px solid var(--line);box-shadow:0 10px 24px rgba(0,0,0,.12);
+  border-radius:10px;
+}
+.search-suggestions.show{display:block}
+.search-suggestion{
+  padding:10px 12px;cursor:pointer;font-size:.88rem;border-bottom:1px solid #eee;
+}
+.search-suggestion:last-child{border-bottom:0}
+.search-suggestion:hover,.search-suggestion.active{background:#f4f4f2}
+.search-help{font-size:.72rem;color:var(--muted);margin-top:5px;line-height:1.35}
+
 </style>
 </head>
 <body>
@@ -214,7 +230,14 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
   </div>
 </header>
 
-<div class="search"><input id="searchInput" placeholder="Buscar produto pelo nome..."><span class="count" id="count"></span></div>
+<div class="search multi-search-wrap">
+  <div style="position:relative;flex:1">
+    <input id="searchInput" autocomplete="off" placeholder="Buscar um ou vários produtos, separados por vírgula...">
+    <div class="search-suggestions" id="searchSuggestions"></div>
+    <div class="search-help">Digite o nome, selecione a sugestão e continue após a vírgula para adicionar outros produtos.</div>
+  </div>
+  <span class="count" id="count"></span>
+</div>
 
 <div class="toolbar">
 <button class="btn" id="detailsBtn">Com detalhes</button>
@@ -551,7 +574,10 @@ function buildFilters(){
 }
 
 function filtered(){
-  const q=normalize($('searchInput').value.trim());
+  const searchTerms=$('searchInput').value
+    .split(',')
+    .map(x=>normalize(x.trim()))
+    .filter(Boolean);
   const min=parseFloat(String($('minPrice').value).replace(',','.'));
   const max=parseFloat(String($('maxPrice').value).replace(',','.'));
   const list=CATALOG.filter(p=>{
@@ -562,7 +588,12 @@ function filtered(){
     if(activeNr==='NR-1' && !pNrs.includes('NR-1')) return false;
     if(activeNr==='NR-17' && !pNrs.includes('NR-17')) return false;
     if(activeNr==='NR-1 + NR-17' && !(pNrs.includes('NR-1') && pNrs.includes('NR-17'))) return false;
-    if(q&&!normalize(p.name).includes(q)) return false;
+    if(searchTerms.length){
+      const productName=normalize(p.name);
+      // Busca múltipla funciona como OU: mostra qualquer produto que corresponda
+      // a pelo menos um dos nomes/termos informados.
+      if(!searchTerms.some(term=>productName.includes(term))) return false;
+    }
     if(!Number.isNaN(min)&&Number(p.price)<min) return false;
     if(!Number.isNaN(max)&&Number(p.price)>max) return false;
     return true;
@@ -686,7 +717,115 @@ $('nr1Btn').onclick=()=>setNrFilter('NR-1');
 $('nr17Btn').onclick=()=>setNrFilter('NR-17');
 $('nr1nr17Btn').onclick=()=>setNrFilter('NR-1 + NR-17');
 
-$('searchInput').oninput=render; $('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
+
+let searchSuggestionIndex=-1;
+
+function getCurrentSearchFragment(){
+  const input=$('searchInput');
+  const parts=input.value.split(',');
+  return (parts[parts.length-1]||'').trim();
+}
+
+function updateSearchSuggestions(){
+  const box=$('searchSuggestions');
+  const fragment=getCurrentSearchFragment();
+  searchSuggestionIndex=-1;
+
+  if(!fragment){
+    box.classList.remove('show');
+    box.innerHTML='';
+    return;
+  }
+
+  const nf=normalize(fragment);
+  const already=$('searchInput').value
+    .split(',')
+    .slice(0,-1)
+    .map(x=>normalize(x.trim()))
+    .filter(Boolean);
+
+  const suggestions=CATALOG
+    .filter(p=>(adminMode||p.active!==false))
+    .filter(p=>normalize(p.name).includes(nf))
+    .filter(p=>!already.includes(normalize(p.name)))
+    .sort((a,b)=>{
+      const an=normalize(a.name),bn=normalize(b.name);
+      const aStarts=an.startsWith(nf)?0:1;
+      const bStarts=bn.startsWith(nf)?0:1;
+      return aStarts-bStarts || a.name.localeCompare(b.name,'pt-BR');
+    })
+    .slice(0,10);
+
+  if(!suggestions.length){
+    box.classList.remove('show');
+    box.innerHTML='';
+    return;
+  }
+
+  box.innerHTML='';
+  suggestions.forEach(p=>{
+    const item=document.createElement('div');
+    item.className='search-suggestion';
+    item.textContent=p.name;
+    item.onmousedown=e=>{
+      e.preventDefault();
+      selectSearchSuggestion(p.name);
+    };
+    box.appendChild(item);
+  });
+  box.classList.add('show');
+}
+
+function selectSearchSuggestion(name){
+  const input=$('searchInput');
+  const parts=input.value.split(',');
+  parts[parts.length-1]=' '+name;
+  input.value=parts.map(x=>x.trim()).filter(Boolean).join(', ') + ', ';
+  $('searchSuggestions').classList.remove('show');
+  $('searchSuggestions').innerHTML='';
+  searchSuggestionIndex=-1;
+  render();
+  input.focus();
+}
+
+function moveSearchSuggestion(step){
+  const items=[...$('searchSuggestions').querySelectorAll('.search-suggestion')];
+  if(!items.length)return;
+  searchSuggestionIndex+=step;
+  if(searchSuggestionIndex<0)searchSuggestionIndex=items.length-1;
+  if(searchSuggestionIndex>=items.length)searchSuggestionIndex=0;
+  items.forEach((el,i)=>el.classList.toggle('active',i===searchSuggestionIndex));
+  items[searchSuggestionIndex].scrollIntoView({block:'nearest'});
+}
+
+$('searchInput').addEventListener('input',()=>{
+  updateSearchSuggestions();
+  render();
+});
+
+$('searchInput').addEventListener('keydown',e=>{
+  const box=$('searchSuggestions');
+  if(!box.classList.contains('show'))return;
+
+  if(e.key==='ArrowDown'){e.preventDefault();moveSearchSuggestion(1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();moveSearchSuggestion(-1);}
+  else if(e.key==='Enter'){
+    const items=[...box.querySelectorAll('.search-suggestion')];
+    if(items.length){
+      e.preventDefault();
+      const i=searchSuggestionIndex>=0?searchSuggestionIndex:0;
+      selectSearchSuggestion(items[i].textContent);
+    }
+  } else if(e.key==='Escape'){
+    box.classList.remove('show');
+  }
+});
+
+$('searchInput').addEventListener('blur',()=>{
+  setTimeout(()=>$('searchSuggestions').classList.remove('show'),120);
+});
+
+$('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
 $('clearPrice').onclick=()=>{$('minPrice').value='';$('maxPrice').value='';render();};
 $('detailsBtn').onclick=()=>{showDetails=!showDetails;$('detailsBtn').textContent=showDetails?'Com detalhes':'Sem detalhes';render();};
 
