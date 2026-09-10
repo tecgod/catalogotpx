@@ -589,7 +589,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>O botão “Gerenciar catálogo” abre o acesso restrito. Após autenticação, é possível cadastrar produtos, alterar nome, preço, tipo, categoria, marca, características, classificação de NRs, confiança ergonômica e status da análise.</p>
 
     <h3>8. Fotos e vídeos</h3>
-    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. O vídeo pode estar no Google Drive, YouTube ou em um arquivo MP4 hospedado na internet. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. O vídeo só é carregado quando esse botão é acionado, preservando a velocidade do catálogo. No modal do vídeo há opções para abrir, compartilhar/copiar o link e, quando a origem permite, baixar o arquivo.</p>
+    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. O vídeo pode estar no Google Drive, YouTube ou em um arquivo MP4 hospedado na internet. Ao salvar o produto, os dados e o link do vídeo são gravados juntos em uma única operação. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. O vídeo só é carregado quando esse botão é acionado, preservando a velocidade do catálogo. No modal do vídeo há opções para abrir, compartilhar/copiar o link e, quando a origem permite, baixar o arquivo.</p>
 
     <h3>9. Ocultar, reativar e excluir</h3>
     <p>Produtos podem ser ocultados sem exclusão definitiva. Produtos enviados à lixeira podem ser restaurados ou excluídos definitivamente pela área de Backup e Segurança.</p>
@@ -694,7 +694,7 @@ let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
-const TPX_FRONTEND_VERSION='1.4.2';
+const TPX_FRONTEND_VERSION='1.4.3';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -856,10 +856,11 @@ function apiPost(method,args){
     input('method',method);
     input('args',JSON.stringify(args||[]));
 
+    const postTimeoutMs=(method==='saveProductWithVideo'||method==='saveProductImage')?75000:60000;
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao executar a operação.'));
-    },60000);
+    },postTimeoutMs);
 
     function onMessage(ev){
       const data=ev.data;
@@ -1758,22 +1759,59 @@ function openProduct(p){
 $('cancelModal').onclick=()=>$('productModal').classList.remove('show');
 
 $('saveProductBtn').onclick=async()=>{
-  const name=$('fName').value.trim(); const price=parseFloat(String($('fPrice').value).replace(',','.'));
-  if(!name)return alert('Informe o nome do produto.'); if(Number.isNaN(price)||price<0)return alert('Informe um preço válido.');
+  const btn=$('saveProductBtn');
+  const originalText=btn.textContent;
+
+  const name=$('fName').value.trim();
+  const price=parseFloat(String($('fPrice').value).replace(',','.'));
+  if(!name)return alert('Informe o nome do produto.');
+  if(Number.isNaN(price)||price<0)return alert('Informe um preço válido.');
+
   const id=$('editId').value||slug(name)+'-'+Date.now().toString().slice(-5);
   const old=CATALOG.find(x=>x.id===id);
-  const product={id,name,price,type:$('fType').value,cat:$('fCat').value.trim()||'Sem categoria',brand:$('fBrand').value.trim(),img:$('fImg').value.trim()||old?.img||slug(name)+'-'+Date.now().toString().slice(-5),features:$('fFeatures').value.split('\n').map(x=>x.trim()).filter(Boolean),active:old?old.active!==false:true,nrs:[...($('fNr1').checked?['NR-1']:[]),...($('fNr17').checked?['NR-17']:[])],ergoConfidence:$('fErgoConfidence').value,ergoStatus:$('fErgoStatus').value};
+  const product={
+    id,
+    name,
+    price,
+    type:$('fType').value,
+    cat:$('fCat').value.trim()||'Sem categoria',
+    brand:$('fBrand').value.trim(),
+    img:$('fImg').value.trim()||old?.img||slug(name)+'-'+Date.now().toString().slice(-5),
+    features:$('fFeatures').value.split('\n').map(x=>x.trim()).filter(Boolean),
+    active:old?old.active!==false:true,
+    nrs:[...($('fNr1').checked?['NR-1']:[]),...($('fNr17').checked?['NR-17']:[])],
+    ergoConfidence:$('fErgoConfidence').value,
+    ergoStatus:$('fErgoStatus').value
+  };
+  const videoUrl=$('fVideoUrl').value.trim();
+
   try{
-    const saved=await api('saveProduct',product,adminPin);
-    const videoUrl=$('fVideoUrl').value.trim();
-    const videoResult=await api('saveProductVideoLink',saved.id,videoUrl,adminPin);
-    if(videoResult && videoResult.url) VIDEOS[saved.id]=videoResult.url;
+    btn.disabled=true;
+    btn.textContent='Salvando...';
+
+    // Produto e vídeo seguem juntos em UMA única chamada ao Apps Script.
+    const result=await api('saveProductWithVideo',product,videoUrl,adminPin);
+    const saved=result && result.product ? result.product : null;
+    if(!saved) throw new Error('O servidor não retornou o produto salvo.');
+
+    if(result.videoUrl) VIDEOS[saved.id]=result.videoUrl;
     else delete VIDEOS[saved.id];
     saveCachedVideoMap(VIDEOS);
 
-    const i=CATALOG.findIndex(x=>x.id===saved.id); if(i>=0)CATALOG[i]=saved;else CATALOG.push(saved);
-    $('productModal').classList.remove('show');buildFilters();render();alert('Produto salvo com sucesso.');
-  }catch(e){alert('Não foi possível salvar. '+e.message);}
+    const i=CATALOG.findIndex(x=>x.id===saved.id);
+    if(i>=0) CATALOG[i]=saved;
+    else CATALOG.push(saved);
+
+    $('productModal').classList.remove('show');
+    buildFilters();
+    render();
+    alert(videoUrl?'Produto e vídeo salvos com sucesso.':'Produto salvo com sucesso.');
+  }catch(e){
+    alert('Não foi possível salvar. '+e.message);
+  }finally{
+    btn.disabled=false;
+    btn.textContent=originalText;
+  }
 };
 
 async function toggleProduct(p){
