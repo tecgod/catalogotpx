@@ -170,6 +170,24 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .price-hide-one{margin-left:7px;font-size:.68rem;padding:4px 7px}
 .price-login-product{font-family:Georgia,serif;font-size:1.05rem;margin:4px 0 14px;color:var(--ink)}
 
+
+/* Aplicabilidade às NRs */
+.nr-filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.nr-badge{display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#e9f5ed;color:#28613b;font-size:.66rem;font-weight:700;vertical-align:middle}
+.nr-options{display:flex;gap:10px;flex-wrap:wrap}
+.nr-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);background:#faf9f6;cursor:pointer;min-width:120px}
+.nr-check input{width:18px;height:18px;margin:0}
+.nr-help{font-size:.76rem;color:var(--muted);margin-top:7px;line-height:1.4}
+
+
+.ergo-admin{display:inline-flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.ergo-badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:.66rem;font-weight:700}
+.ergo-high{background:#dcfce7;color:#166534}
+.ergo-medium{background:#fef3c7;color:#92400e}
+.ergo-low{background:#fee2e2;color:#991b1b}
+.ergo-none{background:#e5e7eb;color:#374151}
+.ergo-status{background:#eef2ff;color:#3730a3}
+
 </style>
 </head>
 <body>
@@ -212,6 +230,13 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 <div class="chips" id="typeChips"></div>
 <div class="filter-title">Linha / categoria</div>
 <div class="chips" id="categoryChips"></div>
+<div class="filter-title">Aplicabilidade às NRs</div>
+<div class="nr-filter-row">
+  <button class="chip active" id="nrAllBtn" type="button">Todas</button>
+  <button class="chip" id="nr1Btn" type="button">NR-1</button>
+  <button class="chip" id="nr17Btn" type="button">NR-17</button>
+  <button class="chip" id="nr1nr17Btn" type="button">NR-1 + NR-17</button>
+</div>
 <div class="price-filter">
 <div class="field"><label>Preço mínimo</label><input id="minPrice" inputmode="decimal" placeholder="Ex.: 400"></div>
 <div class="field"><label>Preço máximo</label><input id="maxPrice" inputmode="decimal" placeholder="Ex.: 800"></div>
@@ -261,6 +286,33 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 <div class="field"><label>Marca</label><input id="fBrand" placeholder="Opcional"></div>
 <div class="field"><label>Chave da imagem</label><input id="fImg" placeholder="Gerada automaticamente"></div>
 </div>
+<div class="field">
+  <label>Aplicabilidade às NRs</label>
+  <div class="nr-options">
+    <label class="nr-check"><input type="checkbox" id="fNr1"> <strong>NR-1</strong></label>
+    <label class="nr-check"><input type="checkbox" id="fNr17"> <strong>NR-17</strong></label>
+  </div>
+  <div class="nr-help">Marque somente as normas cuja relação com este produto esteja tecnicamente fundamentada. O catálogo apresenta aplicabilidade/adequação, não certificação automática do produto.</div>
+</div>
+<div class="grid2">
+  <div class="field">
+    <label>Confiança ergonômica</label>
+    <select id="fErgoConfidence">
+      <option>Alta</option>
+      <option>Média</option>
+      <option>Baixa</option>
+      <option>Não avaliado</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Status da análise ergonômica</label>
+    <select id="fErgoStatus">
+      <option>Sugerido automaticamente</option>
+      <option>Confirmado</option>
+      <option>Revisar</option>
+    </select>
+  </div>
+</div>
 <div class="field"><label>Características, uma por linha</label><textarea id="fFeatures" rows="6"></textarea></div>
 <div class="dialog-actions"><button class="btn" id="cancelModal">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>
 </div></div>
@@ -292,6 +344,7 @@ const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Li
 
 let CATALOG=[], IMAGES={}, adminPin='', adminMode=false, showDetails=true;
 let activeType='Todos', activeCat='Todos', pendingImageKey=null;
+let activeNr='Todas';
 let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
@@ -505,6 +558,10 @@ function filtered(){
     if(!adminMode && p.active===false) return false;
     if(activeType!=='Todos'&&(p.type||'Outros')!==activeType) return false;
     if(activeCat!=='Todos'&&(p.cat||'Sem categoria')!==activeCat) return false;
+    const pNrs=Array.isArray(p.nrs)?p.nrs:[];
+    if(activeNr==='NR-1' && !pNrs.includes('NR-1')) return false;
+    if(activeNr==='NR-17' && !pNrs.includes('NR-17')) return false;
+    if(activeNr==='NR-1 + NR-17' && !(pNrs.includes('NR-1') && pNrs.includes('NR-17'))) return false;
     if(q&&!normalize(p.name).includes(q)) return false;
     if(!Number.isNaN(min)&&Number(p.price)<min) return false;
     if(!Number.isNaN(max)&&Number(p.price)>max) return false;
@@ -534,7 +591,10 @@ function render(){
     const priceHtml = pricesHidden && !priceIsRevealed
       ? `<button class="price-access-btn" type="button" data-price-id="${escapeHtml(p.id)}">Ver preço</button>`
       : `<div class="price${pricesHidden?' price-revealed':''}">${money(p.price)}${pricesHidden?`<button class="btn price-hide-one" type="button" data-hide-price-id="${escapeHtml(p.id)}">Ocultar novamente</button>`:''}</div>`;
-    body.innerHTML=`<h3 class="name">${escapeHtml(p.name)}${adminMode?`<span class="status-badge ${p.active===false?'hidden':'active'}">${p.active===false?'OCULTO':'ATIVO'}</span>`:''}</h3>${priceHtml}<div class="meta">${escapeHtml(p.type||'Outros')} • ${escapeHtml(p.cat||'Sem categoria')}${p.brand?' • '+escapeHtml(p.brand):''}</div>${showDetails?(safeFeatures?`<ul class="features">${safeFeatures}</ul>`:''):''}`;
+    const nrBadges=(Array.isArray(p.nrs)?p.nrs:[]).map(n=>`<span class="nr-badge">${escapeHtml(n)}</span>`).join('');
+    const ergoClass=p.ergoConfidence==='Alta'?'ergo-high':p.ergoConfidence==='Média'?'ergo-medium':p.ergoConfidence==='Baixa'?'ergo-low':'ergo-none';
+    const ergoAdmin=adminMode?`<div class="ergo-admin"><span class="ergo-badge ${ergoClass}">Ergonomia: ${escapeHtml(p.ergoConfidence||'Não avaliado')}</span><span class="ergo-badge ergo-status">${escapeHtml(p.ergoStatus||'Sugerido automaticamente')}</span></div>`:'';
+    body.innerHTML=`<h3 class="name">${escapeHtml(p.name)}${nrBadges}${adminMode?`<span class="status-badge ${p.active===false?'hidden':'active'}">${p.active===false?'OCULTO':'ATIVO'}</span>`:''}</h3>${ergoAdmin}${priceHtml}<div class="meta">${escapeHtml(p.type||'Outros')} • ${escapeHtml(p.cat||'Sem categoria')}${p.brand?' • '+escapeHtml(p.brand):''}</div>${showDetails?(safeFeatures?`<ul class="features">${safeFeatures}</ul>`:''):''}`;
     card.appendChild(body);
     const revealBtn=card.querySelector('[data-price-id]');
     if(revealBtn) revealBtn.onclick=()=>openPriceLogin(p);
@@ -613,6 +673,19 @@ $('pricePasswordInput').addEventListener('keydown',e=>{if(e.key==='Enter')submit
 $('pricePasswordToggle').onclick=()=>{const i=$('pricePasswordInput');i.type=i.type==='password'?'text':'password';$('pricePasswordToggle').textContent=i.type==='password'?'👁':'🙈';i.focus();};
 $('priceLoginModal').addEventListener('click',e=>{if(e.target===$('priceLoginModal'))$('cancelPriceLogin').click();});
 
+function setNrFilter(value){
+  activeNr=value;
+  $('nrAllBtn').classList.toggle('active',value==='Todas');
+  $('nr1Btn').classList.toggle('active',value==='NR-1');
+  $('nr17Btn').classList.toggle('active',value==='NR-17');
+  $('nr1nr17Btn').classList.toggle('active',value==='NR-1 + NR-17');
+  render();
+}
+$('nrAllBtn').onclick=()=>setNrFilter('Todas');
+$('nr1Btn').onclick=()=>setNrFilter('NR-1');
+$('nr17Btn').onclick=()=>setNrFilter('NR-17');
+$('nr1nr17Btn').onclick=()=>setNrFilter('NR-1 + NR-17');
+
 $('searchInput').oninput=render; $('minPrice').oninput=render; $('maxPrice').oninput=render; $('sortBy').onchange=render;
 $('clearPrice').onclick=()=>{$('minPrice').value='';$('maxPrice').value='';render();};
 $('detailsBtn').onclick=()=>{showDetails=!showDetails;$('detailsBtn').textContent=showDetails?'Com detalhes':'Sem detalhes';render();};
@@ -671,7 +744,7 @@ $('addBtn').onclick=()=>openProduct(null);
 function openProduct(p){
   $('modalTitle').textContent=p?'Editar produto':'Novo produto'; $('editId').value=p?.id||'';
   $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fType').value=p?.type||'Cadeiras';
-  $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; $('fFeatures').value=(p?.features||[]).join('\n');
+  $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; const pnrs=Array.isArray(p?.nrs)?p.nrs:[]; $('fNr1').checked=pnrs.includes('NR-1'); $('fNr17').checked=pnrs.includes('NR-17'); $('fErgoConfidence').value=p?.ergoConfidence||'Não avaliado'; $('fErgoStatus').value=p?.ergoStatus||'Sugerido automaticamente'; $('fFeatures').value=(p?.features||[]).join('\n');
   $('productModal').classList.add('show');
 }
 $('cancelModal').onclick=()=>$('productModal').classList.remove('show');
@@ -681,7 +754,7 @@ $('saveProductBtn').onclick=async()=>{
   if(!name)return alert('Informe o nome do produto.'); if(Number.isNaN(price)||price<0)return alert('Informe um preço válido.');
   const id=$('editId').value||slug(name)+'-'+Date.now().toString().slice(-5);
   const old=CATALOG.find(x=>x.id===id);
-  const product={id,name,price,type:$('fType').value,cat:$('fCat').value.trim()||'Sem categoria',brand:$('fBrand').value.trim(),img:$('fImg').value.trim()||old?.img||slug(name)+'-'+Date.now().toString().slice(-5),features:$('fFeatures').value.split('\n').map(x=>x.trim()).filter(Boolean),active:old?old.active!==false:true};
+  const product={id,name,price,type:$('fType').value,cat:$('fCat').value.trim()||'Sem categoria',brand:$('fBrand').value.trim(),img:$('fImg').value.trim()||old?.img||slug(name)+'-'+Date.now().toString().slice(-5),features:$('fFeatures').value.split('\n').map(x=>x.trim()).filter(Boolean),active:old?old.active!==false:true,nrs:[...($('fNr1').checked?['NR-1']:[]),...($('fNr17').checked?['NR-17']:[])],ergoConfidence:$('fErgoConfidence').value,ergoStatus:$('fErgoStatus').value};
   try{
     const saved=await api('saveProduct',product,adminPin);
     const i=CATALOG.findIndex(x=>x.id===saved.id); if(i>=0)CATALOG[i]=saved;else CATALOG.push(saved);
