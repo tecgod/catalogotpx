@@ -438,6 +438,39 @@ let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
+const TPX_IMAGE_CACHE_KEY='tpx_image_map_cache_v1';
+
+function loadCachedImageMap(){
+  try{
+    const raw=localStorage.getItem(TPX_IMAGE_CACHE_KEY);
+    if(!raw) return {};
+    const parsed=JSON.parse(raw);
+    return parsed && typeof parsed==='object' ? parsed : {};
+  }catch(e){ return {}; }
+}
+
+function saveCachedImageMap(map){
+  try{
+    if(map && typeof map==='object') localStorage.setItem(TPX_IMAGE_CACHE_KEY,JSON.stringify(map));
+  }catch(e){}
+}
+
+function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
+
+async function getImageMapWithRetry(){
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{
+      return await api('getImageMap');
+    }catch(e){
+      lastError=e;
+      if(attempt<2) await sleep(1200);
+    }
+  }
+  throw lastError || new Error('Não foi possível carregar as imagens.');
+}
+
+
 const $=id=>document.getElementById(id);
 const money=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const normalize=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -467,10 +500,11 @@ function apiJsonp(method,args=[]){
   return new Promise((resolve,reject)=>{
     const callback='__tpx_jsonp_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
     const script=document.createElement('script');
+    const timeoutMs=method==='getImageMap'?45000:30000;
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
-    },30000);
+    },timeoutMs);
 
     function cleanup(){
       clearTimeout(timer);
@@ -573,26 +607,39 @@ async function loadAll(forceAdmin=false){
   $('retrySync').classList.remove('show');
   $('status').classList.remove('sync-error');
   $('status').textContent='Sincronizando catálogo...';
-  setSyncProgress(8,'Aguarde um pouco, iniciando sincronização...');
+
+  // Usa imediatamente o último mapa de imagens salvo no navegador.
+  // Isso evita tela vazia enquanto o backend confirma as imagens atuais.
+  IMAGES=loadCachedImageMap();
+  setSyncProgress(8,'Conectando ao catálogo...');
 
   try{
-    let completed=0;
-    const updateStage=(label)=>{
-      completed++;
-      if(completed===1) setSyncProgress(48,label+' carregado. Continuando...');
-      else if(completed===2) setSyncProgress(86,'Dados recebidos. Preparando catálogo...');
-    };
-
-    const catalogPromise=((adminMode||forceAdmin) ? api('getCatalogAdmin',adminPin) : api('getCatalog'))
-      .then(result=>{updateStage('Catálogo');return result;});
-
-    const imagesPromise=api('getImageMap')
-      .then(result=>{updateStage('Imagens');return result;});
-
-    const [cat,imgs]=await Promise.all([catalogPromise,imagesPromise]);
+    setSyncProgress(18,'Carregando produtos...');
+    const cat=((adminMode||forceAdmin)
+      ? await api('getCatalogAdmin',adminPin)
+      : await api('getCatalog'));
 
     CATALOG=Array.isArray(cat)?cat:[];
-    IMAGES=imgs||{};
+    setSyncProgress(48,'Produtos carregados. Preparando visualização...');
+
+    // Já permite usar o catálogo com as imagens guardadas localmente.
+    buildFilters();
+    render();
+
+    setSyncProgress(62,'Atualizando mapa de imagens...');
+
+    let imageWarning=false;
+    try{
+      const imgs=await getImageMapWithRetry();
+      IMAGES=imgs||{};
+      saveCachedImageMap(IMAGES);
+      setSyncProgress(88,'Imagens atualizadas. Finalizando...');
+      render();
+    }catch(imageErr){
+      console.warn('Falha ao atualizar imagens, usando cache local:',imageErr);
+      imageWarning=true;
+      setSyncProgress(88,'Catálogo carregado. Mantendo imagens disponíveis no cache...');
+    }
 
     setSyncProgress(94,'Organizando produtos e filtros...');
     buildFilters();
@@ -600,19 +647,27 @@ async function loadAll(forceAdmin=false){
 
     const ativos=CATALOG.filter(p=>p.active!==false).length;
     const ocultos=CATALOG.filter(p=>p.active===false).length;
-    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos${adminMode?' • '+ocultos+' ocultos':''}`;
-    setSyncProgress(100,'Sincronização concluída.', 'complete');
+
+    if(imageWarning){
+      $('status').textContent=`Catálogo sincronizado • ${ativos} ativos${adminMode?' • '+ocultos+' ocultos':''} • imagens em modo de contingência`;
+      setSyncProgress(100,'Catálogo disponível. Algumas imagens podem estar usando a última versão salva.','complete');
+    }else{
+      $('status').textContent=`Catálogo sincronizado • ${ativos} ativos${adminMode?' • '+ocultos+' ocultos':''}`;
+      setSyncProgress(100,'Sincronização concluída.','complete');
+    }
   }catch(e){
     console.error(e);
-    CATALOG=[]; IMAGES={};
+    // Não apaga o cache de imagens em uma falha temporária.
+    CATALOG=[];
     $('status').classList.add('sync-error');
     const msg=String(e.message||e);
     $('status').textContent=msg.includes('PLANILHA_NAO_VINCULADA')
       ? 'Planilha ainda não vinculada ao aplicativo. Execute “Configurar / reparar sistema” na planilha.'
-      : 'Erro ao sincronizar: '+msg;
+      : 'Erro ao carregar produtos: '+msg;
     $('retrySync').classList.add('show');
-    setSyncProgress(100,'Falha na sincronização. Tente novamente.', 'error');
-    buildFilters(); render();
+    setSyncProgress(100,'Falha ao carregar os produtos. Tente novamente.','error');
+    buildFilters();
+    render();
   }
 }
 
