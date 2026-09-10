@@ -207,13 +207,32 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 
 #printArea{display:none}
 @media print{
-  @page{size:A4;margin:10mm}
+  @page{size:A4;margin:8mm}
+  html,body{
+    width:auto !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+    background:#fff !important;
+  }
   body *{visibility:hidden !important}
   #printArea,#printArea *{visibility:visible !important}
   #printArea{
     display:block !important;
-    position:absolute;left:0;top:0;width:100%;
-    background:#fff;color:#000;font-family:Arial,sans-serif;
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:auto !important;
+    min-height:0 !important;
+    overflow:visible !important;
+    background:#fff;
+    color:#000;
+    font-family:Arial,sans-serif;
+    margin:0 !important;
+    padding:0 !important;
   }
   .print-header{border-bottom:1px solid #888;padding-bottom:7px;margin-bottom:9px}
   .print-header h1{font-size:17pt;margin:0 0 2px}
@@ -221,18 +240,39 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
   .print-header .summary{font-size:8.5pt;margin:0}
   .print-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
   .print-card{
-    border:1px solid #bbb;border-radius:5px;padding:7px;
-    break-inside:avoid;page-break-inside:avoid;
+    border:1px solid #bbb;
+    border-radius:5px;
+    padding:7px;
+    break-inside:avoid;
+    page-break-inside:avoid;
+    overflow:hidden;
   }
   .print-card h2{font-size:10.5pt;margin:0 0 4px}
   .print-meta{font-size:7.8pt;line-height:1.35}
   .print-price{font-size:10pt;font-weight:700;margin:4px 0}
   .print-features{font-size:7.6pt;line-height:1.3;margin:4px 0 0 14px;padding:0}
   .print-nrs{font-size:7.5pt;font-weight:700;margin-top:5px}
-  .print-footer{font-size:7.5pt;text-align:center;color:#555;margin-top:8px}
-  .print-photo-wrap{height:105px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
-  .print-photo{max-width:100%;max-height:105px;object-fit:contain}
-  .print-photo-missing{font-size:7.5pt;color:#777}
+  .print-footer{font-size:7pt;text-align:center;color:#555;margin:5px 0 0;padding:0;break-after:auto;page-break-after:auto}
+  .print-photo-wrap{
+    height:150px;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 0 7px;
+    overflow:hidden;
+  }
+  .print-photo{
+    display:block;
+    width:100%;
+    height:100%;
+    max-width:100%;
+    max-height:150px;
+    object-fit:contain;
+    object-position:center center;
+    margin:auto;
+  }
+  .print-photo-missing{font-size:7.5pt;color:#777;text-align:center}
 }
 
 .print-options-dialog{max-width:620px}
