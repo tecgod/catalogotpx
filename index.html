@@ -601,7 +601,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>A área gerencial permite criar backups, consultar versões, restaurar backups compatíveis, acessar a lixeira e acompanhar informações de segurança do sistema.</p>
 
     <h3>12. Sincronização</h3>
-    <p>Na abertura, o catálogo utiliza dados salvos localmente quando disponíveis e atualiza as informações no servidor. Em caso de instabilidade temporária, o catálogo continua disponível com a última versão válida e tenta reconectar automaticamente.</p>
+    <p>Na abertura, o catálogo usa imediatamente a última versão válida salva no navegador, quando disponível. A atualização de produtos, fotos e vídeos acontece em segundo plano e em chamadas separadas. Assim, uma imagem ou vídeo lento não bloqueia o catálogo inteiro. Em caso de instabilidade temporária, o sistema continua funcional com os dados já salvos e tenta atualizar novamente.</p>
 
     <h3>13. Atualização manual</h3>
     <p>O botão “Tentar novamente” aparece quando uma conexão essencial falha. Também é possível atualizar a página. Após alterações de versão no GitHub, use Ctrl + F5 para forçar o navegador a carregar o arquivo mais recente.</p>
@@ -694,7 +694,7 @@ let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
-const TPX_FRONTEND_VERSION='1.4.3';
+const TPX_FRONTEND_VERSION='1.4.4';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -801,7 +801,13 @@ function apiJsonp(method,args=[]){
   return new Promise((resolve,reject)=>{
     const callback='__tpx_jsonp_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
     const script=document.createElement('script');
-    const timeoutMs=(method==='getImageMap'||method==='getVideoMap'||method==='getCatalogBootstrap')?45000:30000;
+    const timeoutMs=method==='getCatalog'
+      ? 22000
+      : (method==='getImageMap'||method==='getVideoMap')
+        ? 28000
+        : method==='getCatalogBootstrap'
+          ? 35000
+          : 30000;
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
@@ -904,29 +910,62 @@ async function apiWithRetry(method,args=[],attempts=3){
 }
 
 let backgroundSyncTimer=null;
-function scheduleBackgroundSync(){
+
+async function refreshPublicDataInBackground(){
+  const results=await Promise.allSettled([
+    apiWithRetry('getCatalog',[],2),
+    apiWithRetry('getImageMap',[],2),
+    apiWithRetry('getVideoMap',[],2)
+  ]);
+
+  let changed=false;
+
+  if(results[0].status==='fulfilled' && Array.isArray(results[0].value)){
+    CATALOG=results[0].value;
+    saveCachedCatalog(CATALOG);
+    changed=true;
+  }else if(results[0].status==='rejected'){
+    console.warn('Atualização de produtos falhou:',results[0].reason);
+  }
+
+  if(results[1].status==='fulfilled' && results[1].value && typeof results[1].value==='object'){
+    IMAGES=results[1].value;
+    saveCachedImageMap(IMAGES);
+    changed=true;
+  }else if(results[1].status==='rejected'){
+    console.warn('Atualização de imagens falhou:',results[1].reason);
+  }
+
+  if(results[2].status==='fulfilled' && results[2].value && typeof results[2].value==='object'){
+    VIDEOS=results[2].value;
+    saveCachedVideoMap(VIDEOS);
+    changed=true;
+  }else if(results[2].status==='rejected'){
+    console.warn('Atualização de vídeos falhou:',results[2].reason);
+  }
+
+  if(changed){
+    buildFilters();
+    render();
+  }
+
+  const ativos=CATALOG.filter(p=>p.active!==false).length;
+  $('status').textContent=`Catálogo sincronizado • ${ativos} ativos`;
+  $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():' • DB 1.2');
+  setSyncProgress(100,'Catálogo pronto para uso.','complete');
+
+  return results;
+}
+
+function scheduleBackgroundSync(delay=2500){
   if(backgroundSyncTimer) clearTimeout(backgroundSyncTimer);
   backgroundSyncTimer=setTimeout(async()=>{
     try{
-      const data=await apiWithRetry('getCatalogBootstrap',[],2);
-      if(!data || !Array.isArray(data.catalog)) return;
-      CATALOG=data.catalog;
-      IMAGES=data.images||IMAGES||{};
-      VIDEOS=data.videos||VIDEOS||{};
-      saveCachedCatalog(CATALOG);
-      saveCachedImageMap(IMAGES);
-      saveCachedVideoMap(VIDEOS);
-      saveCachedDbVersion(data.dbVersion);
-      buildFilters();
-      render();
-      const ativos=CATALOG.filter(p=>p.active!==false).length;
-      $('status').textContent=`Catálogo sincronizado • ${ativos} ativos`;
-      $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+' • DB '+(data.dbVersion||loadCachedDbVersion()||'1.2');
-      setSyncProgress(100,'Sincronização concluída.','complete');
+      await refreshPublicDataInBackground();
     }catch(e){
-      console.warn('Nova tentativa automática de sincronização falhou:',e);
+      console.warn('Sincronização em segundo plano falhou:',e);
     }
-  },4500);
+  },delay);
 }
 
 function setSyncProgress(percent,message,state='loading'){
@@ -955,97 +994,100 @@ async function loadAll(forceAdmin=false){
   const cachedVideos=loadCachedVideoMap();
   const cachedDb=loadCachedDbVersion();
 
-  if(cachedCatalog.length && !adminMode && !forceAdmin){
-    CATALOG=cachedCatalog;
+  // Área gerencial continua usando a leitura autenticada.
+  if(adminMode||forceAdmin){
     IMAGES=cachedImages;
     VIDEOS=cachedVideos;
-    buildFilters();
-    render();
-    $('status').textContent=`Catálogo disponível • atualizando dados...`;
-    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(cachedDb?' • DB '+cachedDb:'');
-    setSyncProgress(8,'Catálogo local carregado. Conectando para atualização...');
-  }else{
-    IMAGES=cachedImages;
-    $('status').textContent='Sincronizando catálogo...';
-    setSyncProgress(8,'Conectando ao catálogo...');
-  }
+    $('status').textContent='Sincronizando catálogo gerencial...';
+    setSyncProgress(12,'Conectando à área gerencial...');
 
-  try{
-    if(adminMode||forceAdmin){
-      // Área gerencial usa leitura autenticada para incluir itens ocultos.
-      setSyncProgress(22,'Carregando catálogo gerencial...');
-      const cat=await apiWithRetry('getCatalogAdmin',[adminPin],3);
+    try{
+      setSyncProgress(30,'Carregando produtos...');
+      const cat=await apiWithRetry('getCatalogAdmin',[adminPin],2);
       CATALOG=Array.isArray(cat)?cat:[];
-      setSyncProgress(58,'Produtos carregados. Atualizando mídias...');
-      try{
-        const [imgs,vids]=await Promise.all([
-          apiWithRetry('getImageMap',[],2),
-          apiWithRetry('getVideoMap',[],2)
-        ]);
-        IMAGES=imgs||{};
-        VIDEOS=vids||{};
+
+      setSyncProgress(72,'Produtos carregados. Atualizando mídias...');
+      const media=await Promise.allSettled([
+        apiWithRetry('getImageMap',[],2),
+        apiWithRetry('getVideoMap',[],2)
+      ]);
+
+      if(media[0].status==='fulfilled'){
+        IMAGES=media[0].value||{};
         saveCachedImageMap(IMAGES);
-        saveCachedVideoMap(VIDEOS);
-      }catch(mediaErr){
-        console.warn('Mídias em contingência:',mediaErr);
-        IMAGES=IMAGES||cachedImages||{};
-        VIDEOS=VIDEOS||cachedVideos||{};
       }
+      if(media[1].status==='fulfilled'){
+        VIDEOS=media[1].value||{};
+        saveCachedVideoMap(VIDEOS);
+      }
+
       buildFilters();
       render();
+
       const ativos=CATALOG.filter(p=>p.active!==false).length;
       const ocultos=CATALOG.filter(p=>p.active===false).length;
       $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
       setSyncProgress(100,'Sincronização gerencial concluída.','complete');
       return;
+    }catch(e){
+      console.error(e);
+      CATALOG=[];
+      $('status').classList.add('sync-error');
+      $('status').textContent='Erro ao carregar a área gerencial: '+String(e.message||e);
+      $('retrySync').classList.add('show');
+      setSyncProgress(100,'Falha na sincronização gerencial. Tente novamente.','error');
+      buildFilters();
+      render();
+      return;
     }
+  }
 
-    // Leitura pública otimizada: produtos + imagens + versão em uma única chamada.
-    setSyncProgress(24,'Recebendo catálogo e imagens...');
-    const data=await apiWithRetry('getCatalogBootstrap',[],3);
-
-    if(!data || !Array.isArray(data.catalog)) throw new Error('Resposta incompleta do catálogo.');
-
-    setSyncProgress(62,'Dados recebidos. Montando catálogo...');
-    CATALOG=data.catalog;
-    IMAGES=data.images||{};
-    VIDEOS=data.videos||{};
-
-    saveCachedCatalog(CATALOG);
-    saveCachedImageMap(IMAGES);
-    saveCachedVideoMap(VIDEOS);
-    saveCachedDbVersion(data.dbVersion);
-
+  // Fluxo público rápido:
+  // 1) se houver cache válido, libera o catálogo imediatamente;
+  // 2) a atualização do servidor acontece em segundo plano;
+  // 3) produtos, imagens e vídeos são atualizados separadamente, então uma mídia lenta
+  //    não trava todo o catálogo em uma porcentagem intermediária.
+  if(cachedCatalog.length){
+    CATALOG=cachedCatalog;
+    IMAGES=cachedImages;
+    VIDEOS=cachedVideos;
     buildFilters();
     render();
 
-    setSyncProgress(92,'Finalizando filtros e imagens...');
+    $('status').textContent='Catálogo disponível • verificando atualizações...';
+    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(cachedDb?' • DB '+cachedDb:' • DB 1.2');
+    setSyncProgress(100,'Catálogo pronto. Atualizando dados em segundo plano...','complete');
+
+    scheduleBackgroundSync(350);
+    return;
+  }
+
+  // Primeiro acesso neste navegador: carrega apenas os produtos para liberar a tela.
+  IMAGES=cachedImages;
+  VIDEOS=cachedVideos;
+  $('status').textContent='Sincronizando catálogo...';
+  setSyncProgress(10,'Conectando ao catálogo...');
+
+  try{
+    setSyncProgress(32,'Carregando produtos...');
+    const cat=await apiWithRetry('getCatalog',[],2);
+    CATALOG=Array.isArray(cat)?cat:[];
+
+    setSyncProgress(78,'Produtos recebidos. Montando catálogo...');
+    buildFilters();
+    render();
+
     const ativos=CATALOG.filter(p=>p.active!==false).length;
-    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos`;
-    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+' • DB '+(data.dbVersion||'1.2');
-    setSyncProgress(100,'Sincronização concluída.','complete');
+    $('status').textContent=`Catálogo disponível • ${ativos} ativos • atualizando mídias...`;
+    setSyncProgress(100,'Catálogo pronto para uso. Fotos e vídeos serão atualizados em segundo plano.','complete');
+
+    saveCachedCatalog(CATALOG);
+    scheduleBackgroundSync(250);
   }catch(e){
     console.error(e);
-    const msg=String(e.message||e);
-
-    if(cachedCatalog.length && !adminMode && !forceAdmin){
-      // Mantém o sistema utilizável e tenta novamente sozinho.
-      CATALOG=cachedCatalog;
-      IMAGES=cachedImages;
-      VIDEOS=cachedVideos;
-      buildFilters();
-      render();
-      $('status').textContent='Catálogo disponível com dados salvos • reconectando automaticamente';
-      setSyncProgress(100,'Conexão instável. O catálogo continua funcional e fará nova tentativa automática.','complete');
-      scheduleBackgroundSync();
-      return;
-    }
-
     CATALOG=[];
     $('status').classList.add('sync-error');
-    $('status').textContent=msg.includes('PLANILHA_NAO_VINCULADA')
-      ? 'Planilha ainda não vinculada ao aplicativo. Execute “Configurar / reparar sistema” na planilha.'
-      : 'Erro ao carregar produtos: '+msg;
+    $('status').textContent='Erro ao carregar produtos: '+String(e.message||e);
     $('retrySync').classList.add('show');
     setSyncProgress(100,'Falha ao carregar os produtos. Tente novamente.','error');
     buildFilters();
