@@ -204,6 +204,34 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .search-suggestion:hover,.search-suggestion.active{background:#f4f4f2}
 .search-help{font-size:.72rem;color:var(--muted);margin-top:5px;line-height:1.35}
 
+
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:10mm}
+  body *{visibility:hidden !important}
+  #printArea,#printArea *{visibility:visible !important}
+  #printArea{
+    display:block !important;
+    position:absolute;left:0;top:0;width:100%;
+    background:#fff;color:#000;font-family:Arial,sans-serif;
+  }
+  .print-header{border-bottom:1px solid #888;padding-bottom:7px;margin-bottom:9px}
+  .print-header h1{font-size:17pt;margin:0 0 2px}
+  .print-header .sub{font-size:9pt;margin:0 0 4px}
+  .print-header .summary{font-size:8.5pt;margin:0}
+  .print-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .print-card{
+    border:1px solid #bbb;border-radius:5px;padding:7px;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  .print-card h2{font-size:10.5pt;margin:0 0 4px}
+  .print-meta{font-size:7.8pt;line-height:1.35}
+  .print-price{font-size:10pt;font-weight:700;margin:4px 0}
+  .print-features{font-size:7.6pt;line-height:1.3;margin:4px 0 0 14px;padding:0}
+  .print-nrs{font-size:7.5pt;font-weight:700;margin-top:5px}
+  .print-footer{font-size:7.5pt;text-align:center;color:#555;margin-top:8px}
+}
+
 </style>
 </head>
 <body>
@@ -241,6 +269,8 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 
 <div class="toolbar">
 <button class="btn" id="detailsBtn">Com detalhes</button>
+<button class="btn" id="printSelectedBtn" type="button" title="Imprimir a lista atualmente selecionada">🖨️ Imprimir seleção</button>
+
 <button class="btn primary" id="adminBtn">Gerenciar catálogo</button>
 <button class="btn op-btn" id="priceToggleBtn" type="button" title="Ocultar ou mostrar preços">OP</button>
 <button class="btn" id="addBtn" style="display:none">+ Novo produto</button>
@@ -646,6 +676,68 @@ function render(){
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
 
+function buildSelectedPrintArea(){
+  const list=filtered();
+
+  if(!list.length){
+    alert('Nenhum produto selecionado para impressão.');
+    return false;
+  }
+
+  const area=$('printArea');
+  const now=new Date();
+  const date=now.toLocaleDateString('pt-BR');
+  const time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const cards=list.map(p=>{
+    const nrs=Array.isArray(p.nrs)&&p.nrs.length?p.nrs.join(' + '):'Sem classificação NR';
+    const features=Array.isArray(p.features)&&p.features.length
+      ? `<ul class="print-features">${p.features.map(f=>`<li>${escapeHtml(f)}</li>`).join('')}</ul>`
+      : '';
+
+    return `<article class="print-card">
+      <h2>${escapeHtml(p.name)}</h2>
+      <div class="print-meta">
+        <strong>Tipo:</strong> ${escapeHtml(p.type||'Outros')}<br>
+        <strong>Categoria:</strong> ${escapeHtml(p.cat||'Sem categoria')}
+        ${p.brand?`<br><strong>Marca:</strong> ${escapeHtml(p.brand)}`:''}
+      </div>
+      <div class="print-price">${money(p.price)}</div>
+      ${features}
+      <div class="print-nrs">Aplicabilidade às NRs: ${escapeHtml(nrs)}</div>
+    </article>`;
+  }).join('');
+
+  area.innerHTML=`<section class="print-header">
+      <h1>Catálogo Inteligente TPX Office</h1>
+      <p class="sub">Móveis Corporativos</p>
+      <p class="summary"><strong>Lista selecionada:</strong> ${list.length} produto(s) | ${date} ${time}</p>
+    </section>
+    <section class="print-grid">${cards}</section>
+    <div class="print-footer">Sistema desenvolvido por Marcelo Antunes</div>`;
+
+  return true;
+}
+
+function printSelectedProducts(){
+  if(!buildSelectedPrintArea()) return;
+
+  // Só prepara o HTML no clique. Não carrega imagens nem gera arquivo em segundo plano.
+  requestAnimationFrame(()=>{
+    window.print();
+    setTimeout(()=>{
+      const area=$('printArea');
+      if(area) area.innerHTML='';
+    },700);
+  });
+}
+
+if($('printSelectedBtn')){
+  $('printSelectedBtn').onclick=printSelectedProducts;
+}
+
+
+
 function applyPriceVisibility(){
   document.body.classList.toggle('hide-prices', pricesHidden);
   const btn=$('priceToggleBtn');
@@ -982,5 +1074,6 @@ api('getSystemInfo').then(info=>{$('versionBadge').textContent='TPX Catálogo �
 applyPriceVisibility();
 loadAll();
 </script>
+<div id="printArea" aria-hidden="true"></div>
 </body>
 </html>
