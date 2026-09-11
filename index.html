@@ -453,6 +453,12 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 <div class="chips" id="typeChips"></div>
 <div class="filter-title">Linha / categoria</div>
 <div class="chips" id="categoryChips"></div>
+
+<div id="mechanismFilterBlock">
+  <div class="filter-title">Mecanismo da cadeira</div>
+  <div class="chips" id="mechanismChips"></div>
+</div>
+
 <div class="filter-title">Aplicabilidade às NRs</div>
 <div class="nr-filter-row">
   <button class="chip active" id="nrAllBtn" type="button">Todas</button>
@@ -578,7 +584,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>Digite o nome de um produto no campo de busca. É possível selecionar vários produtos na mesma pesquisa, separados por vírgula. As sugestões ajudam a completar os nomes cadastrados.</p>
 
     <h3>3. Filtros</h3>
-    <p>Use os filtros de tipo, linha/categoria, aplicabilidade às NRs, preço mínimo, preço máximo e ordenação. Os filtros podem ser combinados.</p>
+    <p>Use os filtros de tipo, linha/categoria, mecanismo da cadeira, aplicabilidade às NRs, preço mínimo, preço máximo e ordenação. O filtro de mecanismo é dinâmico: mostra somente os sistemas encontrados nas cadeiras disponíveis, como Síncrono, SRE, Relax, Backsystem, SRY e Fixo, incluindo a quantidade encontrada. Os filtros podem ser combinados.</p>
 
     <h3>4. Visualização dos detalhes</h3>
     <p>O botão “Com detalhes” alterna a exibição das características dos produtos. As fotos, preços e informações técnicas são exibidos conforme o modo atual do catálogo.</p>
@@ -604,8 +610,8 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <h3>11. Backup e segurança</h3>
     <p>A área gerencial permite criar backups, consultar versões, restaurar backups compatíveis, acessar a lixeira e acompanhar informações de segurança do sistema.</p>
 
-    <h3>12. Sincronização</h3>
-    <p>Na abertura, o catálogo usa imediatamente a última versão válida salva no navegador, quando disponível. A atualização de produtos, fotos e vídeos acontece em segundo plano e em chamadas separadas. Assim, uma imagem ou vídeo lento não bloqueia o catálogo inteiro. Em caso de instabilidade temporária, o sistema continua funcional com os dados já salvos e tenta atualizar novamente.</p>
+    <h3>12. Sincronização e sessão gerencial</h3>
+    <p>Na abertura, o catálogo usa a última versão válida salva no navegador e atualiza produtos, fotos e vídeos em segundo plano. A sessão gerencial é renovada automaticamente durante o uso. Ao voltar para uma aba que ficou parada, o sistema revalida a sessão antes da próxima gravação. Se for necessário entrar novamente, o rascunho da edição é preservado.</p>
 
     <h3>13. Atualização manual</h3>
     <p>O botão “Tentar novamente” aparece quando uma conexão essencial falha. Também é possível atualizar a página. Após alterações de versão no GitHub, use Ctrl + F5 para forçar o navegador a carregar o arquivo mais recente.</p>
@@ -692,13 +698,207 @@ const TPX_API_URL = 'https://script.google.com/macros/s/AKfycby89mCP-1ynAar7cccx
 const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Linha Office", "img": "lo-unique-sem-braco", "features": ["Encosto em polipropileno", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-unique-sem-braco", "active": true}, {"name": "Unique com braço", "price": 799, "cat": "Linha Office", "img": "lo-unique-com-braco", "features": ["Encosto em polipropileno", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-unique-com-braco", "active": true}, {"name": "Goah Pop", "price": 1089, "cat": "Linha Office", "img": "lo-goah-pop", "features": ["Encosto em tela", "Ajuste de altura dos braços", "Ajuste de altura do assento", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-goah-pop", "active": true}, {"name": "Fluid", "price": 1049, "cat": "Linha Office", "img": "lo-fluid", "features": ["Encosto em tela", "Ajuste de altura do assento", "Braço fixo", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-fluid", "active": true}, {"name": "Presidente Office", "price": 1099, "cat": "Linha Office", "img": "lo-presidente-office", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços fixos", "Mecanismo relax com trava", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-presidente-office", "active": true}, {"name": "Flip Light", "price": 1089, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-flip-light", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços reguláveis em altura", "Mecanismo fixo", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-flip-light", "active": true}, {"name": "Start NR17 Executiva", "price": 1290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-nr17-executiva", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-start-nr17-executiva", "active": true}, {"name": "Space Presidente", "price": 1099, "cat": "Linha Office", "img": "lo-space-presidente", "features": ["Ajuste de altura do assento", "Ajuste de altura de braço", "Encosto em tela", "Suporte de lombar ajustável", "Mecanismo relax", "Suporte de cabeça ajustável"], "type": "Cadeiras", "id": "lo-space-presidente", "active": true}, {"name": "Goah", "price": 1290, "cat": "Linha Office", "img": "lo-goah", "features": ["Ajuste da altura do assento", "Braços fixos", "Garantia de 6 anos"], "type": "Cadeiras", "id": "lo-goah", "active": true}, {"name": "Ergoplus Diretor", "price": 1390, "cat": "Linha Office", "img": "lo-ergoplus-diretor", "features": ["Ajuste de altura dos braços", "Ajuste de altura do assento", "Ajuste de altura do encosto", "Inclinação", "Garantia de 2 anos"], "type": "Cadeiras", "id": "lo-ergoplus-diretor", "active": true}, {"name": "Start Presidente", "price": 1490, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-presidente", "features": ["Relax", "Regulagem de braço", "Regulagem de altura do assento"], "type": "Cadeiras", "id": "lo-start-presidente", "active": true}, {"name": "Spinal Diretor", "price": 1590, "cat": "Linha Office", "img": "lo-spinal-diretor", "features": ["Mecanismo sincronizado", "Base e braço em aço cromado", "Suporta até 150 kg", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-spinal-diretor", "active": true}, {"name": "TPX Diretor", "price": 1497, "cat": "Linha Office", "img": "lo-tpx-diretor", "features": ["Mecanismo Backsystem", "Ajuste de altura do assento", "Ajuste de altura do braço", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-tpx-diretor", "active": true}, {"name": "Ergonomy Diretor", "price": 1590, "cat": "Linha Office", "img": "lo-ergonomy-diretor", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Inclinação"], "type": "Cadeiras", "id": "lo-ergonomy-diretor", "active": true}, {"name": "Spinal Presidente", "price": 1690, "cat": "Linha Office", "img": "lo-spinal-presidente", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Inclinação"], "type": "Cadeiras", "id": "lo-spinal-presidente", "active": true}, {"name": "Confort Max Diretor", "price": 1699, "cat": "Linha Office", "img": "lo-confort-max-diretor", "features": ["Mecanismo sincronizado", "Assento com molas ensacadas", "Base e braço em aço cromado", "Suporta até 150 kg", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-confort-max-diretor", "active": true}, {"name": "Yon Diretor", "price": 1790, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-yon-diretor", "features": ["Mecanismo SRY NR17", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Garantia de 6 anos"], "type": "Cadeiras", "id": "lo-yon-diretor", "active": true}, {"name": "Ergonomy Presidente", "price": 1690, "cat": "Linha Office", "img": "lo-ergonomy-presidente", "features": ["Encosto em tela com apoio lombar regulável", "Apoio de cabeça fixo", "Regulagem de altura do assento", "Braços reguláveis em altura", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-ergonomy-presidente", "active": true}, {"name": "Confort Max Presidente", "price": 1799, "cat": "Linha Office", "img": "lo-confort-max-presidente", "features": ["Mecanismo sincronizado", "Base e braço em aço cromado", "Suporta até 150 kg", "Com apoio de cabeça", "Garantia de até 5 anos"], "type": "Cadeiras", "id": "lo-confort-max-presidente", "active": true}, {"name": "TPX Presidente", "price": 1989, "cat": "Linha Office", "img": "lo-tpx-presidente", "features": ["Encosto em tela", "Regulagem de altura do assento", "Braços reguláveis em altura", "Mecanismo com inclinação e ajuste de encosto", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-tpx-presidente", "active": true}, {"name": "Flip Sre", "price": 1790, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-flip-sre", "features": ["Encosto em tela", "Regulagem de altura do assento", "Encosto com regulagem de altura", "Mecanismo SRE (Sistema Reclinador do Encosto)", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-flip-sre", "active": true}, {"name": "Yon Presidente", "price": 1990, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-yon-presidente", "features": ["Encosto em tela com apoio lombar ajustável", "Apoio de cabeça regulável em altura e inclinação", "Regulagem de altura do assento", "Braços reguláveis em altura", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-yon-presidente", "active": true}, {"name": "Mais (cor preta)", "price": 1890, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-mais-preta", "features": ["Braços reguláveis", "Regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-mais-preta", "active": true}, {"name": "Poltrona Presidente", "price": 1890, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-poltrona-presidente", "features": ["Mecanismo sincronizado", "Assento com molas ensacadas", "Garantia de 1 ano"], "type": "Cadeiras", "id": "lo-poltrona-presidente", "active": true}, {"name": "Slim SRE", "price": 1990, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-slim-sre", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo SRE"], "type": "Cadeiras", "id": "lo-slim-sre", "active": true}, {"name": "Mais (cor caramelo)", "price": 2150, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-mais-caramelo", "features": ["Braços reguláveis", "Regulagem de altura", "Mecanismo Syncron"], "type": "Cadeiras", "id": "lo-mais-caramelo", "active": true}, {"name": "Slim sycrom", "price": 2290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-slim-sycrom", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo sycrom"], "type": "Cadeiras", "id": "lo-slim-sycrom", "active": true}, {"name": "Ergon", "price": 2899, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-ergon", "features": ["Mecanismo Syncron", "Regulagem de braço", "Regulagem de altura do assento", "Apoio de lombar", "Ajuste de profundidade do assento", "Base de alumínio"], "type": "Cadeiras", "id": "lo-ergon", "active": true}, {"name": "Start Extra", "price": 3690, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-start-extra", "features": ["Braços reguláveis", "Assento com regulagem de altura", "Mecanismo Syncron", "Suporta até 140 kg"], "type": "Cadeiras", "id": "lo-start-extra", "active": true}, {"name": "Artis", "price": 3997, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-artis", "features": ["Encosto em lâmina injetada em compósito polimérico", "Braço com ajuste de altura e regulagem lateral", "Mecanismo Syncron", "Ajuste de altura do assento"], "type": "Cadeiras", "id": "lo-artis", "active": true}, {"name": "Leef", "price": 5290, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-leef", "features": ["Encosto com estrutura flexível", "Regulagem de altura do assento", "Braços reguláveis", "Mecanismo Syncron", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-leef", "active": true}, {"name": "Essence", "price": 6390, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-essence", "features": ["Encosto alto estofado", "Assento com regulagem de altura e profundidade", "Mecanismo Syncron", "Garantia de até 6 anos"], "type": "Cadeiras", "id": "lo-essence", "active": true}, {"name": "Aura", "price": 6199, "cat": "Linha Office", "brand": "Cavaletti", "img": "lo-aura", "features": ["Braço fixo", "Encosto em tela", "Mecanismo Syncron com regulagem automática da tensão", "Ajuste de altura do assento"], "type": "Cadeiras", "id": "lo-aura", "active": true}, {"name": "Bit", "price": 317, "cat": "Cadeiras Fixa", "img": "cf-bit", "features": ["Base em aço", "Assento em polipropileno", "Cores de metal: preto, branco, cinza", "Cores de polipropileno: preto, caramelo, laranja, azul-petróleo, verde, azul"], "type": "Cadeiras", "id": "cf-bit", "active": true}, {"name": "Croqui", "price": 429, "cat": "Cadeiras Fixa", "img": "cf-croqui", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi"], "type": "Cadeiras", "id": "cf-croqui", "active": true}, {"name": "Croqui acolchoada", "price": 489, "cat": "Cadeiras Fixa", "img": "cf-croqui-acolchoada", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi", "Assento acolchoado"], "type": "Cadeiras", "id": "cf-croqui-acolchoada", "active": true}, {"name": "Oxford", "price": 899, "cat": "Cadeiras Fixa", "img": "cf-oxford", "features": ["Revestimento em tecido ou couro ecológico (PU)", "Pés em aço", "Cores de couro: terracota, caramelo, preto"], "type": "Cadeiras", "id": "cf-oxford", "active": true}, {"name": "Chamonix", "price": 929, "cat": "Cadeiras Fixa", "img": "cf-chamonix", "features": ["Assento revestido em couro ecológico (PU)", "Base em aço carbono preto ou champagne", "Opções de cores de couro e metal"], "type": "Cadeiras", "id": "cf-chamonix", "active": true}, {"name": "Dinamarca", "price": 929, "cat": "Cadeiras Fixa", "img": "cf-dinamarca", "features": ["Revestimento em couro ecológico (PU)", "Pés em aço", "Cores de couro: caramelo, preto"], "type": "Cadeiras", "id": "cf-dinamarca", "active": true}, {"name": "Toulouse", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-toulouse", "features": ["Assento em polipropileno", "Pé em aço com pintura epóxi", "Disponível em 4 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-toulouse", "active": true}, {"name": "Firenze", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-firenze", "features": ["Revestimento em tecido ou couro ecológico (PU)", "Pés em aço", "Disponível em 7 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-firenze", "active": true}, {"name": "Napoli", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-napoli", "features": ["Tecido ou couro ecológico (PU)", "Pés em aço", "Disponível em 7 modelos/acabamentos"], "type": "Cadeiras", "id": "cf-napoli", "active": true}, {"name": "Nevada", "price": 989, "cat": "Cadeiras Fixa", "img": "cf-nevada", "features": ["Assento e encosto em tecido", "Pés em aço carbono", "Várias cores de couro e aço"], "type": "Cadeiras", "id": "cf-nevada", "active": true}, {"name": "Esteirinha Fixa", "price": 1190, "cat": "Cadeiras Fixa", "img": "cf-esteirinha-fixa", "features": ["Tecido ou couro ecológico (PU)", "Pés em aço", "Várias cores de couro"], "type": "Cadeiras", "id": "cf-esteirinha-fixa", "active": true}, {"name": "Prime Fixa", "price": 1390, "cat": "Cadeiras Fixa", "img": "cf-prime-fixa", "features": ["Encosto em tela", "Base fixa"], "type": "Cadeiras", "id": "cf-prime-fixa", "active": true}, {"name": "Kyoto", "price": 1397, "cat": "Cadeiras Fixa", "img": "cf-kyoto", "features": ["Assento revestido em tecido", "Base em aço carbono", "Assento giratório"], "type": "Cadeiras", "id": "cf-kyoto", "active": true}, {"name": "Ravena Fixa", "price": 1590, "cat": "Cadeiras Fixa", "img": "cf-ravena-fixa", "features": ["Capa removível estofada, sustentada por lona 100% poliéster de alta resistência", "Estrutura e braços em aço carbono cromado com apoio estofado"], "type": "Cadeiras", "id": "cf-ravena-fixa", "active": true}, {"name": "Poltrona Moma", "price": 1597, "cat": "Cadeiras Fixa", "img": "cf-poltrona-moma", "features": ["Assento e encosto em tecido", "Base em aço", "Disponível em 2 modelos"], "type": "Cadeiras", "id": "cf-poltrona-moma", "active": true}, {"name": "Eloise", "price": 1790, "cat": "Cadeiras Fixa", "img": "cf-eloise", "features": ["Assento e encosto em couro", "Base em aço", "Cores de couro: preto, branco"], "type": "Cadeiras", "id": "cf-eloise", "active": true}, {"name": "Inhotim", "price": 2147, "cat": "Cadeiras Fixa", "img": "cf-inhotim", "features": ["Tecido e/ou couro ecológico (PU)", "Base em aço carbono", "Disponível em 4 modelos"], "type": "Cadeiras", "id": "cf-inhotim", "active": true}, {"name": "Louvre", "price": 2597, "cat": "Cadeiras Fixa", "img": "cf-louvre", "features": ["Tecido e couro ecológico", "Base em aço", "Assento giratório", "Disponível em 2 modelos"], "type": "Cadeiras", "id": "cf-louvre", "active": true}, {"name": "Metropolitan", "price": 3497, "cat": "Cadeiras Fixa", "img": "cf-metropolitan", "features": ["Assento e encosto em couro", "Base em aço", "Assento giratório"], "type": "Cadeiras", "id": "cf-metropolitan", "active": true}, {"name": "Unique", "price": 599, "cat": "Cadeiras Caixa", "img": "cc-unique", "features": ["Encosto em polipropileno", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-unique", "active": true}, {"name": "Unique aro móvel", "price": 749, "cat": "Cadeiras Caixa", "img": "cc-unique-aro-movel", "features": ["Encosto em polipropileno", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-unique-aro-movel", "active": true}, {"name": "Executiva Caixa aro fixo", "price": 597, "cat": "Cadeiras Caixa", "img": "cc-executiva-caixa-aro-fixo", "features": ["Encosto acolchoado", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-executiva-caixa-aro-fixo", "active": true}, {"name": "Executiva Caixa aro móvel", "price": 747, "cat": "Cadeiras Caixa", "img": "cc-executiva-caixa-aro-movel", "features": ["Encosto acolchoado", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-executiva-caixa-aro-movel", "active": true}, {"name": "Executiva NR17 aro fixo", "price": 797, "cat": "Cadeiras Caixa", "img": "cc-executiva-nr17-aro-fixo", "features": ["Encosto acolchoado com ergonomia NR17", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-executiva-nr17-aro-fixo", "active": true}, {"name": "Executiva NR17 aro móvel", "price": 947, "cat": "Cadeiras Caixa", "img": "cc-executiva-nr17-aro-movel", "features": ["Encosto acolchoado com ergonomia NR17", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-executiva-nr17-aro-movel", "active": true}, {"name": "TPX aro fixo", "price": 1497, "cat": "Cadeiras Caixa", "img": "cc-tpx-aro-fixo", "features": ["Encosto em tela", "Ajuste de altura do assento", "Pé no aro fixo"], "type": "Cadeiras", "id": "cc-tpx-aro-fixo", "active": true}, {"name": "TPX aro móvel", "price": 1547, "cat": "Cadeiras Caixa", "img": "cc-tpx-aro-movel", "features": ["Encosto em tela", "Ajuste de altura do assento", "Pé no aro móvel"], "type": "Cadeiras", "id": "cc-tpx-aro-movel", "active": true}, {"name": "Sofá Spero", "price": 2947, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-spero", "features": [], "type": "Sofás", "id": "sf-sofa-spero", "active": true}, {"name": "Mesa Talk", "price": 797, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-mesa-talk", "features": [], "type": "Mesas", "id": "sf-mesa-talk", "active": true}, {"name": "Sofá Boldy Puff", "price": 1897, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy-puff", "features": [], "type": "Sofás", "id": "sf-sofa-boldy-puff", "active": true}, {"name": "Sofá Boldy Mesa", "price": 1697, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy-mesa", "features": [], "type": "Mesas", "id": "sf-sofa-boldy-mesa", "active": true}, {"name": "Bee Elíptica (Tecido)", "price": 2497, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-bee-eliptica", "features": [], "type": "Sofás", "id": "sf-bee-eliptica", "active": true}, {"name": "Bee Elíptica (Vinil)", "price": 3097, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-bee-eliptica", "features": [], "type": "Sofás", "id": "sf-bee-eliptica", "active": true}, {"name": "Sofá Boldy", "price": 4897, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-sofa-boldy", "features": [], "type": "Sofás", "id": "sf-sofa-boldy", "active": true}, {"name": "Spot", "price": 2490, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-spot", "features": [], "type": "Sofás", "id": "sf-spot", "active": true}, {"name": "Spin", "price": 6597, "cat": "Sofás Cavaletti", "brand": "Cavaletti", "img": "sf-spin", "features": [], "type": "Sofás", "id": "sf-spin", "active": true}];
 
 let CATALOG=[], IMAGES={}, VIDEOS={}, adminPin='', adminMode=false, showDetails=true;
-let activeType='Todos', activeCat='Todos', pendingImageKey=null;
+let activeType='Todos', activeCat='Todos', activeMechanism='Todos', pendingImageKey=null;
 let activeNr='Todas';
 let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
-const TPX_FRONTEND_VERSION='1.4.6';
+const TPX_ADMIN_SESSION_KEY='tpx_admin_session_v2';
+const TPX_EDITOR_DRAFT_KEY='tpx_product_editor_draft_v2';
+
+let adminSessionExpiresAt=0;
+let adminKeepAliveTimer=null;
+let lastAdminActivityAt=Date.now();
+
+function getStoredAdminSession(){
+  try{return sessionStorage.getItem(TPX_ADMIN_SESSION_KEY)||'';}catch(e){return '';}
+}
+
+function storeAdminSession(token,expiresAt){
+  try{
+    if(token) sessionStorage.setItem(TPX_ADMIN_SESSION_KEY,String(token));
+    else sessionStorage.removeItem(TPX_ADMIN_SESSION_KEY);
+  }catch(e){}
+  adminSessionExpiresAt=Number(expiresAt)||0;
+}
+
+function clearStoredAdminSession(){
+  try{sessionStorage.removeItem(TPX_ADMIN_SESSION_KEY);}catch(e){}
+  adminSessionExpiresAt=0;
+}
+
+function collectProductDraft(){
+  if(!$('productModal') || !$('productModal').classList.contains('show')) return null;
+  return {
+    modalOpen:true,
+    editId:$('editId').value,
+    fName:$('fName').value,
+    fPrice:$('fPrice').value,
+    fType:$('fType').value,
+    fCat:$('fCat').value,
+    fBrand:$('fBrand').value,
+    fImg:$('fImg').value,
+    fNr1:$('fNr1').checked,
+    fNr17:$('fNr17').checked,
+    fErgoConfidence:$('fErgoConfidence').value,
+    fErgoStatus:$('fErgoStatus').value,
+    fVideoUrl:$('fVideoUrl').value,
+    fFeatures:$('fFeatures').value,
+    savedAt:Date.now()
+  };
+}
+
+function saveProductDraft(){
+  try{
+    const draft=collectProductDraft();
+    if(draft) sessionStorage.setItem(TPX_EDITOR_DRAFT_KEY,JSON.stringify(draft));
+  }catch(e){}
+}
+
+function loadProductDraft(){
+  try{
+    const raw=sessionStorage.getItem(TPX_EDITOR_DRAFT_KEY);
+    if(!raw) return null;
+    const draft=JSON.parse(raw);
+    return draft && draft.modalOpen ? draft : null;
+  }catch(e){return null;}
+}
+
+function clearProductDraft(){
+  try{sessionStorage.removeItem(TPX_EDITOR_DRAFT_KEY);}catch(e){}
+}
+
+function restoreProductDraft(){
+  const draft=loadProductDraft();
+  if(!draft) return false;
+
+  $('editId').value=draft.editId||'';
+  $('modalTitle').textContent=draft.editId?'Editar produto':'Novo produto';
+  $('fName').value=draft.fName||'';
+  $('fPrice').value=draft.fPrice??'';
+  $('fType').value=draft.fType||'Cadeiras';
+  $('fCat').value=draft.fCat||'';
+  $('fBrand').value=draft.fBrand||'';
+  $('fImg').value=draft.fImg||'';
+  $('fNr1').checked=!!draft.fNr1;
+  $('fNr17').checked=!!draft.fNr17;
+  $('fErgoConfidence').value=draft.fErgoConfidence||'Não avaliado';
+  $('fErgoStatus').value=draft.fErgoStatus||'Sugerido automaticamente';
+  $('fVideoUrl').value=draft.fVideoUrl||'';
+  $('fFeatures').value=draft.fFeatures||'';
+  $('productModal').classList.add('show');
+  return true;
+}
+
+function markAdminActivity(){
+  lastAdminActivityAt=Date.now();
+}
+
+async function keepAdminSessionAlive(){
+  if(!adminMode || !adminPin || document.hidden) return false;
+  try{
+    const status=await apiJsonp('keepAdminSessionAlive',[adminPin]);
+    if(status && status.valid){
+      adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
+      markAdminActivity();
+      return true;
+    }
+  }catch(e){
+    console.warn('Não foi possível renovar a sessão gerencial:',e);
+  }
+  return false;
+}
+
+function startAdminKeepAlive(){
+  stopAdminKeepAlive();
+  adminKeepAliveTimer=setInterval(()=>{
+    if(adminMode && adminPin && !document.hidden) keepAdminSessionAlive();
+  },4*60*1000);
+}
+
+function stopAdminKeepAlive(){
+  if(adminKeepAliveTimer){
+    clearInterval(adminKeepAliveTimer);
+    adminKeepAliveTimer=null;
+  }
+}
+
+async function ensureAdminSession(){
+  if(!adminMode || !adminPin) throw new Error('Acesso gerencial não está ativo.');
+
+  try{
+    const status=await apiJsonp('keepAdminSessionAlive',[adminPin]);
+    if(status && status.valid){
+      adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
+      markAdminActivity();
+      return true;
+    }
+  }catch(e){
+    console.warn('Falha ao validar sessão antes da operação:',e);
+  }
+
+  saveProductDraft();
+  adminMode=false;
+  adminPin='';
+  clearStoredAdminSession();
+  stopAdminKeepAlive();
+
+  $('adminBtn').textContent='Gerenciar catálogo';
+  $('adminBtn').classList.remove('active');
+  $('addBtn').style.display='none';
+  $('securityBtn').style.display='none';
+  $('adminNote').classList.remove('show');
+
+  $('loginError').textContent='Sua sessão gerencial precisa ser revalidada. O que você estava editando foi preservado.';
+  $('adminPasswordInput').value='';
+  $('adminPasswordInput').type='password';
+  $('adminLoginModal').classList.add('show');
+  setTimeout(()=>$('adminPasswordInput').focus(),50);
+
+  throw new Error('Sessão gerencial precisa ser revalidada.');
+}
+
+async function resumeStoredAdminSession(){
+  const token=getStoredAdminSession();
+  if(!token) return false;
+
+  try{
+    const login=await apiJsonp('resumeAdminSession',[token]);
+    if(!login || login.valid!==true){
+      clearStoredAdminSession();
+      return false;
+    }
+
+    adminPin=login.sessionToken||token;
+    adminSessionExpiresAt=Number(login.expiresAt)||0;
+    adminMode=true;
+    CATALOG=Array.isArray(login.catalog)?login.catalog:[];
+
+    $('adminBtn').textContent='Sair do gerenciamento';
+    $('adminBtn').classList.add('active');
+    $('addBtn').style.display='inline-block';
+    $('securityBtn').style.display='inline-block';
+    $('adminNote').classList.add('show');
+
+    buildFilters();
+    render();
+    startAdminKeepAlive();
+
+    const ativos=CATALOG.filter(p=>p.active!==false).length;
+    const ocultos=CATALOG.filter(p=>p.active===false).length;
+    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
+
+    return true;
+  }catch(e){
+    console.warn('Não foi possível restaurar a sessão gerencial:',e);
+    clearStoredAdminSession();
+    return false;
+  }
+}
+
+
+const TPX_FRONTEND_VERSION='1.4.8';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -784,17 +984,39 @@ const slug=s=>normalize(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice
 const TPX_PUBLIC_METHODS = new Set(['getCatalog','getCatalogBootstrap','getImageMap','getVideoMap','getSystemInfo','getCatalogStatus']);
 let TPX_REQUEST_SEQ = 0;
 
-function api(method,...args){
+const TPX_ADMIN_PROTECTED_METHODS=new Set([
+  'getCatalogAdmin','getSystemInfo','listBackups','getTrash',
+  'saveProductWithVideo','setProductActive','deleteProductPermanent',
+  'saveProductImage','deleteProductImage','saveProductVideoLink','deleteProductVideoLink',
+  'restoreTrashProduct','purgeTrashProduct','restoreBackup','createBackup'
+]);
+
+async function api(method,...args){
   if(!TPX_API_URL || TPX_API_URL.includes('COLE_AQUI_')){
-    return Promise.reject(new Error('Configure a constante TPX_API_URL no index.html com a URL /exec do Apps Script.'));
+    throw new Error('Configure a constante TPX_API_URL no index.html com a URL /exec do Apps Script.');
   }
 
-  // Leitura pública e validação simples da senha de consulta usam JSONP.
-  // Isso evita o bloqueio/timeout do POST em iframe entre GitHub Pages e Apps Script.
   if(TPX_PUBLIC_METHODS.has(method) && args.length===0){
     return apiJsonp(method,[]);
   }
-  if(method==='verifyPricePin' || method==='verifyAdminPin' || method==='getCatalogAdmin' || method==='adminLogin' || method==='getOperationStatus'){
+
+  if(
+    method==='verifyPricePin' ||
+    method==='verifyAdminPin' ||
+    method==='adminLogin' ||
+    method==='resumeAdminSession' ||
+    method==='keepAdminSessionAlive' ||
+    method==='endAdminSession' ||
+    method==='getOperationStatus'
+  ){
+    return apiJsonp(method,args);
+  }
+
+  if(TPX_ADMIN_PROTECTED_METHODS.has(method)){
+    await ensureAdminSession();
+  }
+
+  if(method==='getCatalogAdmin'){
     return apiJsonp(method,args);
   }
 
@@ -1228,13 +1450,98 @@ async function loadAll(forceAdmin=false){
 
 $('retrySync').onclick=()=>loadAll(adminMode);
 
+
+const MECHANISM_FILTER_ORDER=['Síncrono','SRE','Relax','Backsystem','SRY','Fixo'];
+
+function getProductMechanisms(product){
+  if(!product || String(product.type||'')!=='Cadeiras') return [];
+
+  const source=normalize([
+    product.name||'',
+    product.cat||'',
+    ...(Array.isArray(product.features)?product.features:[])
+  ].join(' '));
+
+  const found=[];
+
+  // Variações presentes no catálogo: Syncron, sincronizado, sycrom etc.
+  if(/\b(syncron|sincron|sincro|sycrom|syncrom)\w*/.test(source)) found.push('Síncrono');
+  if(/\bsre\b/.test(source)) found.push('SRE');
+  if(/\brelax\b/.test(source)) found.push('Relax');
+  if(/\bback\s*system\b|\bbacksystem\b/.test(source)) found.push('Backsystem');
+  if(/\bsry\b/.test(source)) found.push('SRY');
+  if(/\bmecanismo\s+fixo\b/.test(source)) found.push('Fixo');
+
+  return [...new Set(found)];
+}
+
+function buildMechanismFilters(){
+  const block=$('mechanismFilterBlock');
+  const box=$('mechanismChips');
+
+  // O filtro é pertinente somente quando "Todos" ou "Cadeiras" está selecionado.
+  if(activeType!=='Todos' && activeType!=='Cadeiras'){
+    activeMechanism='Todos';
+    block.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+
+  const chairPool=CATALOG.filter(p=>{
+    if(!adminMode && p.active===false) return false;
+    if(String(p.type||'')!=='Cadeiras') return false;
+    if(activeCat!=='Todos' && (p.cat||'Sem categoria')!==activeCat) return false;
+    return true;
+  });
+
+  const counts=new Map();
+  chairPool.forEach(p=>{
+    getProductMechanisms(p).forEach(m=>counts.set(m,(counts.get(m)||0)+1));
+  });
+
+  const available=MECHANISM_FILTER_ORDER.filter(m=>counts.has(m));
+
+  if(!available.length){
+    activeMechanism='Todos';
+    block.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+
+  block.style.display='';
+  if(activeMechanism!=='Todos' && !available.includes(activeMechanism)) activeMechanism='Todos';
+
+  box.innerHTML='';
+
+  const all=document.createElement('button');
+  all.className='chip'+(activeMechanism==='Todos'?' active':'');
+  all.textContent='Todos';
+  all.type='button';
+  all.onclick=()=>{activeMechanism='Todos';buildMechanismFilters();render();};
+  box.appendChild(all);
+
+  available.forEach(m=>{
+    const b=document.createElement('button');
+    b.className='chip'+(activeMechanism===m?' active':'');
+    b.type='button';
+    b.textContent=`${m} (${counts.get(m)})`;
+    b.onclick=()=>{
+      activeMechanism=m;
+      // Se estiver em "Todos", o próprio filtro já restringe a cadeiras.
+      buildMechanismFilters();
+      render();
+    };
+    box.appendChild(b);
+  });
+}
+
 function buildFilters(){
   const types=['Todos',...new Set(CATALOG.filter(p=>adminMode||p.active!==false).map(p=>p.type||'Outros'))];
   if(!types.includes(activeType)) activeType='Todos';
   $('typeChips').innerHTML='';
   types.forEach(v=>{
     const b=document.createElement('button'); b.className='chip'+(v===activeType?' active':''); b.textContent=v;
-    b.onclick=()=>{activeType=v; activeCat='Todos'; buildFilters(); render();};
+    b.onclick=()=>{activeType=v; activeCat='Todos'; activeMechanism='Todos'; buildFilters(); render();};
     $('typeChips').appendChild(b);
   });
 
@@ -1244,9 +1551,11 @@ function buildFilters(){
   $('categoryChips').innerHTML='';
   cats.forEach(v=>{
     const b=document.createElement('button'); b.className='chip'+(v===activeCat?' active':''); b.textContent=v;
-    b.onclick=()=>{activeCat=v; buildFilters(); render();};
+    b.onclick=()=>{activeCat=v; activeMechanism='Todos'; buildFilters(); render();};
     $('categoryChips').appendChild(b);
   });
+
+  buildMechanismFilters();
 }
 
 function filtered(){
@@ -1260,6 +1569,10 @@ function filtered(){
     if(!adminMode && p.active===false) return false;
     if(activeType!=='Todos'&&(p.type||'Outros')!==activeType) return false;
     if(activeCat!=='Todos'&&(p.cat||'Sem categoria')!==activeCat) return false;
+    if(activeMechanism!=='Todos'){
+      if(String(p.type||'')!=='Cadeiras') return false;
+      if(!getProductMechanisms(p).includes(activeMechanism)) return false;
+    }
     const pNrs=Array.isArray(p.nrs)?p.nrs:[];
     if(activeNr==='NR-1' && !pNrs.includes('NR-1')) return false;
     if(activeNr==='NR-17' && !pNrs.includes('NR-17')) return false;
@@ -1935,8 +2248,23 @@ $('detailsBtn').onclick=()=>{showDetails=!showDetails;$('detailsBtn').textConten
 
 $('adminBtn').onclick=async()=>{
   if(adminMode){
-    adminMode=false;adminPin='';$('adminBtn').textContent='Gerenciar catálogo';$('adminBtn').classList.remove('active');$('addBtn').style.display='none';$('securityBtn').style.display='none';$('adminNote').classList.remove('show');activeType='Todos';activeCat='Todos';
-    await loadAll(false); return;
+    const tokenToEnd=adminPin;
+    try{if(tokenToEnd) await apiJsonp('endAdminSession',[tokenToEnd]);}catch(e){}
+    adminMode=false;
+    adminPin='';
+    clearStoredAdminSession();
+    stopAdminKeepAlive();
+    clearProductDraft();
+    $('adminBtn').textContent='Gerenciar catálogo';
+    $('adminBtn').classList.remove('active');
+    $('addBtn').style.display='none';
+    $('securityBtn').style.display='none';
+    $('adminNote').classList.remove('show');
+    activeType='Todos';
+    activeCat='Todos';
+    activeMechanism='Todos';
+    await loadAll(false);
+    return;
   }
   $('loginError').textContent='';
   $('adminPasswordInput').value='';
@@ -1958,9 +2286,13 @@ async function submitAdminLogin(){
       return;
     }
 
-    adminPin=pin;
+    adminPin=login.sessionToken||pin;
+    adminSessionExpiresAt=Number(login.expiresAt)||0;
+    storeAdminSession(adminPin,adminSessionExpiresAt);
     adminMode=true;
     CATALOG=Array.isArray(login.catalog)?login.catalog:[];
+    startAdminKeepAlive();
+    markAdminActivity();
     $('adminLoginModal').classList.remove('show');
     $('adminBtn').textContent='Sair do gerenciamento';
     $('adminBtn').classList.add('active');
@@ -1974,7 +2306,8 @@ async function submitAdminLogin(){
     const ativos=CATALOG.filter(p=>p.active!==false).length;
     const ocultos=CATALOG.filter(p=>p.active===false).length;
     $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
-  }catch(e){adminMode=false;adminPin='';$('loginError').textContent='Não foi possível validar o acesso. '+e.message;}
+    if(loadProductDraft()) restoreProductDraft();
+  }catch(e){adminMode=false;adminPin='';clearStoredAdminSession();$('loginError').textContent='Não foi possível validar o acesso. '+e.message;}
   finally{$('confirmAdminLogin').disabled=false;}
 }
 $('confirmAdminLogin').onclick=submitAdminLogin;
@@ -1989,10 +2322,23 @@ function openProduct(p){
   $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fType').value=p?.type||'Cadeiras';
   $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; const pnrs=Array.isArray(p?.nrs)?p.nrs:[]; $('fNr1').checked=pnrs.includes('NR-1'); $('fNr17').checked=pnrs.includes('NR-17'); $('fErgoConfidence').value=p?.ergoConfidence||'Não avaliado'; $('fErgoStatus').value=p?.ergoStatus||'Sugerido automaticamente'; $('fVideoUrl').value=p?.id?(VIDEOS[p.id]||''):''; $('fFeatures').value=(p?.features||[]).join('\n');
   $('productModal').classList.add('show');
+  saveProductDraft();
 }
-$('cancelModal').onclick=()=>$('productModal').classList.remove('show');
+
+$('productModal').addEventListener('input',e=>{
+  if(e.target && e.target.matches('input,textarea,select')) saveProductDraft();
+});
+$('productModal').addEventListener('change',e=>{
+  if(e.target && e.target.matches('input,textarea,select')) saveProductDraft();
+});
+
+$('cancelModal').onclick=()=>{
+  $('productModal').classList.remove('show');
+  clearProductDraft();
+};
 
 $('saveProductBtn').onclick=async()=>{
+  saveProductDraft();
   const btn=$('saveProductBtn');
   const originalText=btn.textContent;
 
@@ -2037,6 +2383,7 @@ $('saveProductBtn').onclick=async()=>{
     else CATALOG.push(saved);
 
     $('productModal').classList.remove('show');
+    clearProductDraft();
     buildFilters();
     render();
     alert(videoUrl?'Produto e vídeo salvos com sucesso.':'Produto salvo com sucesso.');
@@ -2082,6 +2429,7 @@ $('saveProductBtn').onclick=async()=>{
 
         saveCachedVideoMap(VIDEOS);
         $('productModal').classList.remove('show');
+        clearProductDraft();
         buildFilters();
         render();
         alert(videoUrl?'Produto e vídeo salvos com sucesso.':'Produto salvo com sucesso.');
@@ -2146,6 +2494,44 @@ function openZoom(src){
 $('zoomClose').onclick=closeZoom;
 $('zoom').onclick=e=>{if(e.target===$('zoom'))closeZoom();};
 
+
+window.addEventListener('pagehide',()=>{
+  if($('productModal')?.classList.contains('show')) saveProductDraft();
+});
+window.addEventListener('beforeunload',()=>{
+  if($('productModal')?.classList.contains('show')) saveProductDraft();
+});
+
+document.addEventListener('visibilitychange',async()=>{
+  if(document.hidden) return;
+
+  if(adminMode && adminPin){
+    const idleMs=Date.now()-lastAdminActivityAt;
+    if(idleMs>2*60*1000){
+      const ok=await keepAdminSessionAlive();
+      if(!ok){
+        saveProductDraft();
+        adminMode=false;
+        adminPin='';
+        clearStoredAdminSession();
+        stopAdminKeepAlive();
+
+        $('adminBtn').textContent='Gerenciar catálogo';
+        $('adminBtn').classList.remove('active');
+        $('addBtn').style.display='none';
+        $('securityBtn').style.display='none';
+        $('adminNote').classList.remove('show');
+
+        $('loginError').textContent='A sessão gerencial precisa ser revalidada. Seu rascunho foi preservado.';
+        $('adminPasswordInput').value='';
+        $('adminLoginModal').classList.add('show');
+        setTimeout(()=>$('adminPasswordInput').focus(),50);
+      }
+    }
+    markAdminActivity();
+  }
+});
+
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
 
@@ -2204,8 +2590,43 @@ $('refreshSecurityBtn').onclick=refreshSecurity;
 $('createBackupBtn').onclick=async()=>{try{const b=await api('createBackup','MANUAL',adminPin);alert('Backup criado: '+b.name);await refreshSecurity();}catch(e){alert('Falha no backup: '+e.message)}};
 $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():'');
 
-applyPriceVisibility();
-loadAll();
+async function initializeApp(){
+  applyPriceVisibility();
+
+  const resumed=await resumeStoredAdminSession();
+
+  if(resumed){
+    try{
+      const media=await Promise.allSettled([
+        apiJsonp('getImageMap',[]),
+        apiJsonp('getVideoMap',[])
+      ]);
+      if(media[0].status==='fulfilled'){
+        IMAGES=media[0].value||{};
+        saveCachedImageMap(IMAGES);
+      }
+      if(media[1].status==='fulfilled'){
+        VIDEOS=media[1].value||{};
+        saveCachedVideoMap(VIDEOS);
+      }
+      render();
+    }catch(e){}
+
+    if(loadProductDraft()) restoreProductDraft();
+    return;
+  }
+
+  await loadAll();
+
+  if(loadProductDraft()){
+    $('loginError').textContent='Existe uma edição não concluída. Digite a senha gerencial para continuar exatamente de onde parou.';
+    $('adminPasswordInput').value='';
+    $('adminLoginModal').classList.add('show');
+    setTimeout(()=>$('adminPasswordInput').focus(),50);
+  }
+}
+
+initializeApp();
 </script>
 <div id="printArea" aria-hidden="true"></div>
 </body>
