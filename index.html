@@ -389,6 +389,8 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .video-note{font-size:.76rem;color:var(--muted);line-height:1.4;margin-top:8px}
 .video-actions{flex-wrap:wrap}
 .video-actions .btn{text-decoration:none;text-align:center}
+.whatsapp-btn{border-color:#128c7e!important;color:#128c7e!important;font-weight:700}
+.whatsapp-btn:hover{background:#128c7e!important;color:#fff!important}
 @media(max-width:650px){
   .video-tools{grid-column:1/-1}
   .video-actions{display:grid;grid-template-columns:1fr}
@@ -558,7 +560,9 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
   <div class="video-stage" id="videoStage"></div>
   <div class="video-note" id="videoNote"></div>
   <div class="dialog-actions video-actions">
-    <button class="btn" id="shareVideoBtn" type="button">Compartilhar / copiar link</button>
+    <button class="btn whatsapp-btn" id="whatsappVideoBtn" type="button">WhatsApp</button>
+    <button class="btn" id="copyVideoBtn" type="button">Copiar link</button>
+    <button class="btn" id="shareVideoBtn" type="button">Compartilhar</button>
     <a class="btn" id="openVideoBtn" target="_blank" rel="noopener">Abrir vídeo</a>
     <a class="btn primary" id="downloadVideoBtn" target="_blank" rel="noopener">Baixar vídeo</a>
   </div>
@@ -589,7 +593,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>O botão “Gerenciar catálogo” abre o acesso restrito. Após autenticação, é possível cadastrar produtos, alterar nome, preço, tipo, categoria, marca, características, classificação de NRs, confiança ergonômica e status da análise.</p>
 
     <h3>8. Fotos e vídeos</h3>
-    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. O vídeo pode estar no Google Drive, YouTube ou em um arquivo MP4 hospedado na internet. Ao salvar o produto, os dados e o link do vídeo são gravados juntos em uma única operação. O sistema possui confirmação redundante do salvamento para evitar a falsa mensagem de tempo esgotado quando o servidor conclui a gravação, mas o navegador perde a resposta. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. O vídeo só é carregado quando esse botão é acionado, preservando a velocidade do catálogo.</p>
+    <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. Dentro da janela do vídeo existem opções separadas para WhatsApp, Copiar link, Compartilhar, Abrir vídeo e, quando a origem permitir, Baixar vídeo. A tecla Esc fecha tanto a visualização ampliada da foto quanto a janela do vídeo. O vídeo só é carregado quando “Ver vídeo” é acionado, preservando a velocidade do catálogo.</p>
 
     <h3>9. Ocultar, reativar e excluir</h3>
     <p>Produtos podem ser ocultados sem exclusão definitiva. Produtos enviados à lixeira podem ser restaurados ou excluídos definitivamente pela área de Backup e Segurança.</p>
@@ -694,7 +698,7 @@ let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
 let pendingPriceProduct = null;
 
-const TPX_FRONTEND_VERSION='1.4.5';
+const TPX_FRONTEND_VERSION='1.4.6';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1338,6 +1342,7 @@ function parseVideoSource(url){
       type:'drive',
       original:url,
       embed:`https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
+      open:`https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
       download:`https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`
     };
   }
@@ -1348,15 +1353,16 @@ function parseVideoSource(url){
       type:'youtube',
       original:url,
       embed:`https://www.youtube.com/embed/${encodeURIComponent(m[1])}`,
+      open:url,
       download:''
     };
   }
 
   if(/\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(url)){
-    return {type:'direct',original:url,embed:url,download:url};
+    return {type:'direct',original:url,embed:url,open:url,download:url};
   }
 
-  return {type:'generic',original:url,embed:'',download:''};
+  return {type:'generic',original:url,embed:'',open:url,download:''};
 }
 
 function closeProductVideo(){
@@ -1400,7 +1406,7 @@ function openProductVideo(product){
     $('videoStage').appendChild(msg);
   }
 
-  $('openVideoBtn').href=source.original;
+  $('openVideoBtn').href=source.open||source.original;
   $('downloadVideoBtn').style.display=source.download?'inline-block':'none';
   if(source.download) $('downloadVideoBtn').href=source.download;
 
@@ -1415,31 +1421,90 @@ function openProductVideo(product){
   }
 
   $('videoModal').classList.add('show');
+  setTimeout(()=>$('closeVideoBtn').focus({preventScroll:true}),0);
+}
+
+function getCurrentVideoShareData(){
+  if(!currentVideoSource || !currentVideoSource.original) return null;
+  const url=currentVideoSource.original;
+  const title=currentVideoProduct?.name || 'Produto TPX Office';
+  const text=`Veja o vídeo do produto ${title}: ${url}`;
+  return {url,title,text};
+}
+
+function fallbackCopyText(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.setAttribute('readonly','');
+  ta.style.position='fixed';
+  ta.style.left='-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  ta.remove();
+  return ok;
+}
+
+async function copyCurrentVideoLink(){
+  const data=getCurrentVideoShareData();
+  if(!data) return alert('Não foi possível localizar o link do vídeo.');
+
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(data.url);
+      alert('Link do vídeo copiado. Agora é só colar no WhatsApp, e-mail ou outra conversa.');
+      return;
+    }
+  }catch(e){}
+
+  if(fallbackCopyText(data.url)){
+    alert('Link do vídeo copiado. Agora é só colar no WhatsApp, e-mail ou outra conversa.');
+    return;
+  }
+
+  prompt('Copie o link do vídeo:',data.url);
+}
+
+function shareCurrentVideoOnWhatsApp(){
+  const data=getCurrentVideoShareData();
+  if(!data) return alert('Não foi possível localizar o link do vídeo.');
+
+  const whatsappUrl='https://wa.me/?text='+encodeURIComponent(data.text);
+  const w=window.open(whatsappUrl,'_blank','noopener');
+
+  if(!w){
+    // Bloqueador de pop-up: mantém uma alternativa funcional.
+    copyCurrentVideoLink();
+    alert('O navegador bloqueou a abertura do WhatsApp. O link foi preparado para você copiar.');
+  }
 }
 
 async function shareCurrentVideo(){
-  if(!currentVideoSource || !currentVideoSource.original) return;
-  const url=currentVideoSource.original;
-  const title=currentVideoProduct?.name || 'Vídeo TPX Office';
+  const data=getCurrentVideoShareData();
+  if(!data) return alert('Não foi possível localizar o link do vídeo.');
 
   if(navigator.share){
     try{
-      await navigator.share({title,text:`Veja o vídeo do produto ${title}`,url});
+      await navigator.share({
+        title:data.title,
+        text:`Veja o vídeo do produto ${data.title}`,
+        url:data.url
+      });
       return;
     }catch(e){
       if(e && e.name==='AbortError') return;
+      console.warn('Compartilhamento nativo indisponível:',e);
     }
   }
 
-  try{
-    await navigator.clipboard.writeText(url);
-    alert('Link do vídeo copiado. Agora você pode colar no WhatsApp, e-mail ou outro aplicativo.');
-  }catch(e){
-    prompt('Copie o link do vídeo:',url);
-  }
+  // Em computadores sem Web Share, abre o WhatsApp como alternativa principal.
+  shareCurrentVideoOnWhatsApp();
 }
 
 $('closeVideoBtn').onclick=closeProductVideo;
+$('whatsappVideoBtn').onclick=shareCurrentVideoOnWhatsApp;
+$('copyVideoBtn').onclick=copyCurrentVideoLink;
 $('shareVideoBtn').onclick=shareCurrentVideo;
 $('videoModal').addEventListener('click',e=>{if(e.target===$('videoModal'))closeProductVideo();});
 
@@ -2069,7 +2134,34 @@ $('fileInput').onchange=async e=>{
 };
 function optimized(file,max=1600,q=.88){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('Falha ao ler imagem'));r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('Imagem inválida'));im.onload=()=>{const sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q));};im.src=r.result;};r.readAsDataURL(file);});}
 
-function openZoom(src){$('zoomImg').src=src;$('zoom').classList.add('show');} $('zoomClose').onclick=()=>$('zoom').classList.remove('show'); $('zoom').onclick=e=>{if(e.target===$('zoom'))$('zoom').classList.remove('show');};
+function closeZoom(){
+  $('zoom').classList.remove('show');
+  $('zoomImg').src='';
+}
+function openZoom(src){
+  $('zoomImg').src=src;
+  $('zoom').classList.add('show');
+  $('zoomClose').focus({preventScroll:true});
+}
+$('zoomClose').onclick=closeZoom;
+$('zoom').onclick=e=>{if(e.target===$('zoom'))closeZoom();};
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+
+  // Prioridade para a mídia que estiver aberta.
+  if($('zoom').classList.contains('show')){
+    e.preventDefault();
+    closeZoom();
+    return;
+  }
+
+  if($('videoModal').classList.contains('show')){
+    e.preventDefault();
+    closeProductVideo();
+    return;
+  }
+});
 
 
 async function openSecurity(){
