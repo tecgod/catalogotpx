@@ -17,18 +17,114 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 .filter-title{font-size:.78rem;color:var(--soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px} .chip{padding:7px 12px;border:1px solid var(--line);background:#fff;font-size:.82rem} .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .price-filter{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end} .field label{display:block;font-size:.75rem;color:var(--soft);margin-bottom:4px} .field input,.field select,.field textarea{width:100%;padding:10px;border:1px solid var(--line);background:#fff;font:inherit}
-.results{display:flex;flex-direction:column;gap:3px} .card{background:#fff;border:1px solid var(--line);padding:17px 20px;display:grid;grid-template-columns:92px 1fr auto;gap:4px 18px;align-items:start}
-.thumb-wrap{width:92px;height:92px;grid-row:1/4;position:relative} .thumb,.thumb-empty{width:92px;height:92px;border:1px solid var(--line);background:#f1efe9;object-fit:contain;padding:4px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.68rem;color:var(--soft)}
-.name{font-family:Georgia,serif;font-size:1.2rem;margin:0;align-self:center} .price{font-weight:700;color:var(--red2);white-space:nowrap;align-self:center} .meta{font-size:.7rem;color:var(--soft);text-transform:uppercase}
-.features{grid-column:2/-1;margin:8px 0 0;padding-left:18px;line-height:1.45;font-size:.9rem} .admin-actions{grid-column:2/-1;margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
+.results{display:flex;flex-direction:column;gap:7px}
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  padding:18px 20px;
+  display:grid;
+  grid-template-columns:280px minmax(0,1fr) auto;
+  gap:6px 20px;
+  align-items:start;
+  min-height:270px;
+}
+.thumb-wrap{
+  width:280px;
+  min-height:235px;
+  height:100%;
+  max-height:380px;
+  grid-row:1/99;
+  position:relative;
+  align-self:stretch;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.thumb,.thumb-empty{
+  width:100%;
+  height:100%;
+  min-height:235px;
+  max-height:380px;
+  border:1px solid var(--line);
+  background:#f7f6f3;
+  object-fit:contain;
+  object-position:center;
+  padding:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:.8rem;
+  color:var(--soft);
+}
+.name{font-family:Georgia,serif;font-size:1.34rem;margin:0;align-self:center} .price{font-weight:700;color:var(--red2);white-space:nowrap;align-self:center} .meta{font-size:.7rem;color:var(--soft);text-transform:uppercase}
+.features{grid-column:2/-1;margin:10px 0 0;padding-left:20px;line-height:1.5;font-size:.92rem} .admin-actions{grid-column:2/-1;margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
 .admin-note{display:none;background:#fbeceb;border:1px solid var(--red);padding:9px 12px;margin:8px 0;font-size:.82rem} .admin-note.show{display:block}
 .card.hidden-product{opacity:.68;background:#f2f0eb}.status-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:3px 7px;border-radius:999px;margin-left:7px;vertical-align:middle}.status-badge.hidden{background:#ece6da;color:#7d0d15}.status-badge.active{background:#e9f5ed;color:#28613b}.btn.danger{border-color:#a8121c;color:#a8121c}.btn.danger:hover{background:#a8121c;color:#fff}.btn.success{border-color:#2f6d45;color:#2f6d45}.sync-error{color:#a8121c;font-weight:600}.sync-retry{display:none;margin-left:8px}.sync-retry.show{display:inline-block}
 .empty{background:#fff;border:1px solid var(--line);padding:50px;text-align:center;color:var(--soft)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;padding:16px;z-index:50} .modal.show{display:flex} .dialog{background:#fff;width:min(680px,100%);max-height:92vh;overflow:auto;padding:20px;border-radius:4px}
-.dialog h2{margin-top:0;font-family:Georgia,serif;font-weight:400} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .dialog .field{margin-bottom:10px} .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.dialog h2{margin-top:0;font-family:Georgia,serif;font-weight:400}
+
+#productModal .dialog{width:min(980px,100%)}
+.edit-photo-panel{
+  display:grid;
+  grid-template-columns:minmax(300px,380px) 1fr;
+  gap:14px;
+  align-items:center;
+  margin:0 0 18px;
+  padding:12px;
+  border:1px solid var(--line);
+  background:#faf9f6;
+}
+.edit-photo-frame{
+  width:100%;
+  height:320px;
+  border:1px solid var(--line);
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  cursor:pointer;
+}
+.edit-photo-frame img{
+  display:none;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  padding:8px;
+}
+.edit-photo-empty{
+  color:var(--soft);
+  text-align:center;
+  padding:20px;
+  font-size:.86rem;
+}
+.edit-photo-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:9px;
+}
+@media(max-width:700px){
+  #productModal .dialog{width:100%}
+  .edit-photo-panel{grid-template-columns:1fr}
+  .edit-photo-frame{height:260px}
+}
+ .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .dialog .field{margin-bottom:10px} .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .zoom{position:fixed;inset:0;background:rgba(15,15,15,.93);display:none;align-items:center;justify-content:center;z-index:60;padding:20px} .zoom.show{display:flex} .zoom img{max-width:100%;max-height:90vh;object-fit:contain} .zoom button{position:absolute;top:15px;right:20px;background:none;border:0;color:white;font-size:2rem}
 .status{font-size:.78rem;color:var(--soft);margin-left:auto}.version-badge{font-size:.72rem;color:var(--soft);margin-top:6px}.security-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.security-card{border:1px solid var(--line);padding:12px;background:#faf9f6}.security-card strong{display:block;margin-bottom:5px}.backup-list,.trash-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.backup-row,.trash-row{border:1px solid var(--line);padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center}.small{font-size:.76rem;color:var(--soft)}
-@media(max-width:650px){.security-grid{grid-template-columns:1fr}.card{grid-template-columns:72px 1fr} .thumb-wrap,.thumb,.thumb-empty{width:72px;height:72px} .price{grid-column:2} .features,.admin-actions{grid-column:1/-1} .price-filter,.grid2{grid-template-columns:1fr} header{align-items:flex-start}}
+@media(max-width:650px){
+  .security-grid{grid-template-columns:1fr}
+  .card{grid-template-columns:118px minmax(0,1fr);min-height:150px;padding:12px}
+  .thumb-wrap{width:118px;min-height:140px;max-height:190px;grid-row:1/99}
+  .thumb,.thumb-empty{width:118px;min-height:140px;max-height:190px;padding:5px}
+  .price{grid-column:2}
+  .features,.admin-actions{grid-column:1/-1}
+  .price-filter,.grid2{grid-template-columns:1fr}
+  header{align-items:flex-start}
+}
 
 .admin-login-dialog{width:min(420px,100%);text-align:center;padding:28px 24px;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
 .admin-lock{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;background:#fbeceb;color:var(--red);display:flex;align-items:center;justify-content:center;font-size:2rem;border:1px solid #efc8c8}
@@ -401,6 +497,11 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .manual-content h3{margin:15px 0 5px;font-size:.98rem}
 .manual-content p{margin:0 0 8px;color:#444;font-size:.86rem}
 
+@media(min-width:651px) and (max-width:900px){
+  .card{grid-template-columns:220px minmax(0,1fr) auto}
+  .thumb-wrap{width:220px;min-height:210px;max-height:330px}
+  .thumb,.thumb-empty{min-height:210px;max-height:330px}
+}
 </style>
 </head>
 <body>
@@ -587,7 +688,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>Use os filtros de tipo, linha/categoria, mecanismo da cadeira, aplicabilidade às NRs, preço mínimo, preço máximo e ordenação. O filtro de mecanismo é dinâmico: mostra somente os sistemas encontrados nas cadeiras disponíveis, como Síncrono, SRE, Relax, Backsystem, SRY e Fixo, incluindo a quantidade encontrada. Os filtros podem ser combinados.</p>
 
     <h3>4. Visualização dos detalhes</h3>
-    <p>O botão “Com detalhes” alterna a exibição das características dos produtos. As fotos, preços e informações técnicas são exibidos conforme o modo atual do catálogo.</p>
+    <p>O botão “Com detalhes” alterna a exibição das características dos produtos. As fotos aparecem em tamanho ampliado e aproveitam melhor a altura livre do card. Na tela de edição também existe uma pré-visualização grande da foto atual do produto.</p>
 
     <h3>5. Modo OP e consulta de preço</h3>
     <p>O botão OP oculta os preços do catálogo. Quando os preços estão ocultos, um preço individual pode ser revelado com a senha de consulta, sem liberar todos os demais preços.</p>
@@ -628,6 +729,17 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 <div class="modal" id="productModal"><div class="dialog">
 <h2 id="modalTitle">Produto</h2>
 <input type="hidden" id="editId">
+
+<div class="edit-photo-panel" id="editPhotoPanel">
+  <div class="edit-photo-frame" id="editPhotoFrame" title="Clique para trocar a foto">
+    <img id="editPhotoPreview" alt="Foto do produto">
+    <div class="edit-photo-empty" id="editPhotoEmpty">Sem foto cadastrada</div>
+  </div>
+  <div class="edit-photo-actions">
+    <button class="btn" type="button" id="editPhotoChangeBtn">Trocar / cadastrar foto</button>
+    <span class="small">Visualização ampliada da foto atual do produto.</span>
+  </div>
+</div>
 <div class="grid2">
 <div class="field"><label>Nome do produto</label><input id="fName"></div>
 <div class="field"><label>Preço (R$)</label><input id="fPrice" inputmode="decimal"></div>
@@ -788,6 +900,7 @@ function restoreProductDraft(){
   $('fVideoUrl').value=draft.fVideoUrl||'';
   $('fFeatures').value=draft.fFeatures||'';
   $('productModal').classList.add('show');
+  updateEditPhotoPreview();
   return true;
 }
 
@@ -898,7 +1011,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.4.8';
+const TPX_FRONTEND_VERSION='1.4.9';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -2317,11 +2430,41 @@ $('passwordToggle').onclick=()=>{const i=$('adminPasswordInput');i.type=i.type==
 $('adminLoginModal').addEventListener('click',e=>{if(e.target===$('adminLoginModal'))$('cancelAdminLogin').click();});
 
 $('addBtn').onclick=()=>openProduct(null);
+
+function updateEditPhotoPreview(){
+  const key=$('fImg')?.value?.trim()||'';
+  const src=key ? IMAGES[key] : '';
+  const img=$('editPhotoPreview');
+  const empty=$('editPhotoEmpty');
+
+  if(src){
+    img.src=src;
+    img.style.display='block';
+    empty.style.display='none';
+  }else{
+    img.removeAttribute('src');
+    img.style.display='none';
+    empty.style.display='block';
+    empty.textContent=key ? 'Imagem ainda não cadastrada para esta chave.' : 'Sem foto cadastrada';
+  }
+}
+
+function choosePhotoFromEditor(){
+  const key=$('fImg')?.value?.trim();
+  if(!key){
+    alert('Salve o produto primeiro para gerar a chave da imagem.');
+    return;
+  }
+  pendingImageKey=key;
+  $('fileInput').click();
+}
+
 function openProduct(p){
   $('modalTitle').textContent=p?'Editar produto':'Novo produto'; $('editId').value=p?.id||'';
   $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fType').value=p?.type||'Cadeiras';
   $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; const pnrs=Array.isArray(p?.nrs)?p.nrs:[]; $('fNr1').checked=pnrs.includes('NR-1'); $('fNr17').checked=pnrs.includes('NR-17'); $('fErgoConfidence').value=p?.ergoConfidence||'Não avaliado'; $('fErgoStatus').value=p?.ergoStatus||'Sugerido automaticamente'; $('fVideoUrl').value=p?.id?(VIDEOS[p.id]||''):''; $('fFeatures').value=(p?.features||[]).join('\n');
   $('productModal').classList.add('show');
+  updateEditPhotoPreview();
   saveProductDraft();
 }
 
@@ -2336,6 +2479,11 @@ $('cancelModal').onclick=()=>{
   $('productModal').classList.remove('show');
   clearProductDraft();
 };
+
+$('editPhotoFrame').onclick=choosePhotoFromEditor;
+$('editPhotoChangeBtn').onclick=choosePhotoFromEditor;
+$('fImg').addEventListener('input',updateEditPhotoPreview);
+
 
 $('saveProductBtn').onclick=async()=>{
   saveProductDraft();
@@ -2475,10 +2623,27 @@ O produto sairá do catálogo e poderá ser restaurado pela área Backup e Segur
 
 function choosePhoto(p){pendingImageKey=p.img;$('fileInput').click();}
 $('fileInput').onchange=async e=>{
-  const file=e.target.files[0]; if(!file||!pendingImageKey)return;
-  try{const dataUrl=await optimized(file);const result=await api('saveProductImage',pendingImageKey,file.name,dataUrl,adminPin);IMAGES[pendingImageKey]=result.url+'&t='+Date.now();render();}
-  catch(err){alert('Não foi possível salvar a foto. '+err.message);}
-  finally{pendingImageKey=null;e.target.value='';}
+  const file=e.target.files[0];
+  if(!file||!pendingImageKey)return;
+
+  const imageKey=pendingImageKey;
+
+  try{
+    const dataUrl=await optimized(file);
+    const result=await api('saveProductImage',imageKey,file.name,dataUrl,adminPin);
+    IMAGES[imageKey]=result.url+'&t='+Date.now();
+    saveCachedImageMap(IMAGES);
+    render();
+
+    if($('productModal').classList.contains('show') && $('fImg').value.trim()===imageKey){
+      updateEditPhotoPreview();
+    }
+  }catch(err){
+    alert('Não foi possível salvar a foto. '+err.message);
+  }finally{
+    pendingImageKey=null;
+    e.target.value='';
+  }
 };
 function optimized(file,max=1600,q=.88){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('Falha ao ler imagem'));r.onload=()=>{const im=new Image();im.onerror=()=>rej(new Error('Imagem inválida'));im.onload=()=>{const sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q));};im.src=r.result;};r.readAsDataURL(file);});}
 
