@@ -21,21 +21,19 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 .card{
   background:#fff;
   border:1px solid var(--line);
-  padding:18px 20px;
+  padding:16px 18px;
   display:grid;
-  grid-template-columns:280px minmax(0,1fr) auto;
-  gap:6px 20px;
+  grid-template-columns:155px minmax(0,1fr) auto;
+  gap:5px 18px;
   align-items:start;
-  min-height:270px;
+  min-height:0;
 }
 .thumb-wrap{
-  width:280px;
-  min-height:235px;
-  height:100%;
-  max-height:380px;
-  grid-row:1/99;
+  width:155px;
+  height:190px;
+  grid-row:1 / span 6;
   position:relative;
-  align-self:stretch;
+  align-self:start;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -43,21 +41,19 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 .thumb,.thumb-empty{
   width:100%;
   height:100%;
-  min-height:235px;
-  max-height:380px;
   border:1px solid var(--line);
   background:#f7f6f3;
   object-fit:contain;
   object-position:center;
-  padding:8px;
+  padding:6px;
   display:flex;
   align-items:center;
   justify-content:center;
   text-align:center;
-  font-size:.8rem;
+  font-size:.76rem;
   color:var(--soft);
 }
-.name{font-family:Georgia,serif;font-size:1.34rem;margin:0;align-self:center} .price{font-weight:700;color:var(--red2);white-space:nowrap;align-self:center} .meta{font-size:.7rem;color:var(--soft);text-transform:uppercase}
+.name{font-family:Georgia,serif;font-size:1.22rem;margin:0;align-self:center} .price{font-weight:700;color:var(--red2);white-space:nowrap;align-self:center} .meta{font-size:.7rem;color:var(--soft);text-transform:uppercase}
 .features{grid-column:2/-1;margin:10px 0 0;padding-left:20px;line-height:1.5;font-size:.92rem} .admin-actions{grid-column:2/-1;margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
 .admin-note{display:none;background:#fbeceb;border:1px solid var(--red);padding:9px 12px;margin:8px 0;font-size:.82rem} .admin-note.show{display:block}
 .card.hidden-product{opacity:.68;background:#f2f0eb}.status-badge{display:inline-block;font-size:.68rem;font-weight:700;padding:3px 7px;border-radius:999px;margin-left:7px;vertical-align:middle}.status-badge.hidden{background:#ece6da;color:#7d0d15}.status-badge.active{background:#e9f5ed;color:#28613b}.btn.danger{border-color:#a8121c;color:#a8121c}.btn.danger:hover{background:#a8121c;color:#fff}.btn.success{border-color:#2f6d45;color:#2f6d45}.sync-error{color:#a8121c;font-weight:600}.sync-retry{display:none;margin-left:8px}.sync-retry.show{display:inline-block}
@@ -68,7 +64,7 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 #productModal .dialog{width:min(980px,100%)}
 .edit-photo-panel{
   display:grid;
-  grid-template-columns:minmax(300px,380px) 1fr;
+  grid-template-columns:minmax(240px,300px) 1fr;
   gap:14px;
   align-items:center;
   margin:0 0 18px;
@@ -78,7 +74,7 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 }
 .edit-photo-frame{
   width:100%;
-  height:320px;
+  height:220px;
   border:1px solid var(--line);
   background:#fff;
   display:flex;
@@ -110,16 +106,16 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
 @media(max-width:700px){
   #productModal .dialog{width:100%}
   .edit-photo-panel{grid-template-columns:1fr}
-  .edit-photo-frame{height:260px}
+  .edit-photo-frame{height:200px}
 }
  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .dialog .field{margin-bottom:10px} .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .zoom{position:fixed;inset:0;background:rgba(15,15,15,.93);display:none;align-items:center;justify-content:center;z-index:60;padding:20px} .zoom.show{display:flex} .zoom img{max-width:100%;max-height:90vh;object-fit:contain} .zoom button{position:absolute;top:15px;right:20px;background:none;border:0;color:white;font-size:2rem}
 .status{font-size:.78rem;color:var(--soft);margin-left:auto}.version-badge{font-size:.72rem;color:var(--soft);margin-top:6px}.security-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.security-card{border:1px solid var(--line);padding:12px;background:#faf9f6}.security-card strong{display:block;margin-bottom:5px}.backup-list,.trash-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.backup-row,.trash-row{border:1px solid var(--line);padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center}.small{font-size:.76rem;color:var(--soft)}
 @media(max-width:650px){
   .security-grid{grid-template-columns:1fr}
-  .card{grid-template-columns:118px minmax(0,1fr);min-height:150px;padding:12px}
-  .thumb-wrap{width:118px;min-height:140px;max-height:190px;grid-row:1/99}
-  .thumb,.thumb-empty{width:118px;min-height:140px;max-height:190px;padding:5px}
+  .card{grid-template-columns:105px minmax(0,1fr);padding:11px;gap:5px 12px}
+  .thumb-wrap{width:105px;height:135px;grid-row:1 / span 6}
+  .thumb,.thumb-empty{width:105px;height:135px;padding:4px}
   .price{grid-column:2}
   .features,.admin-actions{grid-column:1/-1}
   .price-filter,.grid2{grid-template-columns:1fr}
@@ -498,9 +494,9 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 .manual-content p{margin:0 0 8px;color:#444;font-size:.86rem}
 
 @media(min-width:651px) and (max-width:900px){
-  .card{grid-template-columns:220px minmax(0,1fr) auto}
-  .thumb-wrap{width:220px;min-height:210px;max-height:330px}
-  .thumb,.thumb-empty{min-height:210px;max-height:330px}
+  .card{grid-template-columns:135px minmax(0,1fr) auto}
+  .thumb-wrap{width:135px;height:170px}
+  .thumb,.thumb-empty{height:170px}
 }
 </style>
 </head>
@@ -688,7 +684,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>Use os filtros de tipo, linha/categoria, mecanismo da cadeira, aplicabilidade às NRs, preço mínimo, preço máximo e ordenação. O filtro de mecanismo é dinâmico: mostra somente os sistemas encontrados nas cadeiras disponíveis, como Síncrono, SRE, Relax, Backsystem, SRY e Fixo, incluindo a quantidade encontrada. Os filtros podem ser combinados.</p>
 
     <h3>4. Visualização dos detalhes</h3>
-    <p>O botão “Com detalhes” alterna a exibição das características dos produtos. As fotos aparecem em tamanho ampliado e aproveitam melhor a altura livre do card. Na tela de edição também existe uma pré-visualização grande da foto atual do produto.</p>
+    <p>O botão “Com detalhes” alterna a exibição das características dos produtos. As fotos usam um tamanho equilibrado e os cards são nivelados pela altura do maior conteúdo visível, evitando grandes áreas vazias. Na tela de edição a foto também aparece em tamanho ampliado, porém sem ocupar espaço excessivo.</p>
 
     <h3>5. Modo OP e consulta de preço</h3>
     <p>O botão OP oculta os preços do catálogo. Quando os preços estão ocultos, um preço individual pode ser revelado com a senha de consulta, sem liberar todos os demais preços.</p>
@@ -1011,7 +1007,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.4.9';
+const TPX_FRONTEND_VERSION='1.4.10';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1707,6 +1703,47 @@ function filtered(){
   return list;
 }
 
+
+let cardNormalizeRaf=0;
+
+function normalizeCatalogCardHeights(){
+  if(cardNormalizeRaf) cancelAnimationFrame(cardNormalizeRaf);
+
+  cardNormalizeRaf=requestAnimationFrame(()=>{
+    const cards=[...document.querySelectorAll('#results .card')];
+    if(!cards.length) return;
+
+    // Primeiro mede cada card em seu tamanho natural.
+    cards.forEach(card=>{
+      card.style.minHeight='';
+      const thumb=card.querySelector('.thumb-wrap');
+      if(thumb && window.innerWidth>650) thumb.style.height='190px';
+    });
+
+    requestAnimationFrame(()=>{
+      let maxHeight=0;
+      cards.forEach(card=>{
+        maxHeight=Math.max(maxHeight,Math.ceil(card.getBoundingClientRect().height));
+      });
+
+      // Todos ficam com a altura do maior card atualmente exibido.
+      // A foto acompanha essa altura apenas até um limite confortável,
+      // evitando repetir o excesso de espaço da versão anterior.
+      cards.forEach(card=>{
+        card.style.minHeight=maxHeight+'px';
+
+        if(window.innerWidth>650){
+          const thumb=card.querySelector('.thumb-wrap');
+          if(thumb){
+            const photoHeight=Math.max(160,Math.min(225,maxHeight-34));
+            thumb.style.height=photoHeight+'px';
+          }
+        }
+      });
+    });
+  });
+}
+
 function render(){
   const list=filtered(); $('count').textContent=list.length+(list.length===1?' item':' itens');
   const box=$('results'); box.innerHTML='';
@@ -1747,6 +1784,7 @@ function render(){
     }
     box.appendChild(card);
   });
+  normalizeCatalogCardHeights();
 }
 
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -2659,6 +2697,12 @@ function openZoom(src){
 $('zoomClose').onclick=closeZoom;
 $('zoom').onclick=e=>{if(e.target===$('zoom'))closeZoom();};
 
+
+let catalogResizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(catalogResizeTimer);
+  catalogResizeTimer=setTimeout(normalizeCatalogCardHeights,120);
+});
 
 window.addEventListener('pagehide',()=>{
   if($('productModal')?.classList.contains('show')) saveProductDraft();
