@@ -1090,36 +1090,28 @@ async function ensureAdminSession(){
   throw new Error('Sessão gerencial precisa ser revalidada.');
 }
 
+
 async function resumeStoredAdminSession(){
   const token=getStoredAdminSession();
   if(!token) return false;
-
   try{
-    const login=await apiJsonp('resumeAdminSession',[token]);
+    const login=await apiJsonp('resumeAdminSessionQuick',[token]);
     if(!login || login.valid!==true){
       clearStoredAdminSession();
       return false;
     }
-
     adminPin=login.sessionToken||token;
     adminSessionExpiresAt=Number(login.expiresAt)||0;
     adminMode=true;
-    CATALOG=Array.isArray(login.catalog)?login.catalog:[];
-
     $('adminBtn').textContent='Sair do gerenciamento';
     $('adminBtn').classList.add('active');
     $('addBtn').style.display='inline-block';
     $('securityBtn').style.display='inline-block';
     $('adminNote').classList.add('show');
-
     buildFilters();
     render();
     startAdminKeepAlive();
-
-    const ativos=CATALOG.filter(p=>p.active!==false).length;
-    const ocultos=CATALOG.filter(p=>p.active===false).length;
-    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
-
+    setTimeout(()=>refreshAdminCatalogQuietly(),50);
     return true;
   }catch(e){
     console.warn('Não foi possível restaurar a sessão gerencial:',e);
@@ -1129,7 +1121,30 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.4';
+const TPX_FRONTEND_VERSION='1.5.6';
+
+let TPX_BACKEND_VERSION='';
+function renderVersionBadge(){
+  const db=loadCachedDbVersion()||'1.3';
+  const api=TPX_BACKEND_VERSION ? (' • API '+TPX_BACKEND_VERSION) : '';
+  const el=$('versionBadge');
+  if(el) el.textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+api+' • DB '+db;
+}
+async function verifyBackendVersionInBackground(){
+  try{
+    const info=await apiJsonp('getVersionInfo',[]);
+    if(info && info.systemVersion){
+      TPX_BACKEND_VERSION=String(info.systemVersion);
+      if(info.dbVersion) saveCachedDbVersion(String(info.dbVersion));
+      renderVersionBadge();
+      if(TPX_BACKEND_VERSION!==TPX_FRONTEND_VERSION){
+        console.warn('Versões diferentes: frontend',TPX_FRONTEND_VERSION,'backend',TPX_BACKEND_VERSION);
+      }
+    }
+  }catch(e){
+    console.warn('Não foi possível confirmar a versão do backend:',e);
+  }
+}
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1212,13 +1227,13 @@ const money=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:
 const normalize=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const slug=s=>normalize(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||('produto-'+Date.now());
 
-const TPX_PUBLIC_METHODS = new Set(['getCatalog','getCatalogBootstrap','getImageMap','getVideoMap','getSystemInfo','getCatalogStatus']);
+const TPX_PUBLIC_METHODS = new Set(['getCatalog','getCatalogBootstrap','getImageMap','getVideoMap','getSystemInfo','getCatalogStatus','getVersionInfo']);
 let TPX_REQUEST_SEQ = 0;
 
 const TPX_ADMIN_PROTECTED_METHODS=new Set([
   'getCatalogAdmin','getSystemInfo','listBackups','getTrash',
   'saveProductWithVideo','setProductActive','deleteProductPermanent',
-  'saveProductImage','deleteProductImage','saveProductVideoLink','deleteProductVideoLink',
+  'saveProductImage','deleteProductImage','saveProductReferenceImages','saveProductVideoLink','deleteProductVideoLink',
   'restoreTrashProduct','purgeTrashProduct','restoreBackup','createBackup'
 ]);
 
@@ -1235,7 +1250,9 @@ async function api(method,...args){
     method==='verifyPricePin' ||
     method==='verifyAdminPin' ||
     method==='adminLogin' ||
+    method==='adminLoginQuick' ||
     method==='resumeAdminSession' ||
+    method==='resumeAdminSessionQuick' ||
     method==='keepAdminSessionAlive' ||
     method==='endAdminSession' ||
     method==='getOperationStatus'
@@ -1262,13 +1279,15 @@ function apiJsonp(method,args=[]){
   return new Promise((resolve,reject)=>{
     const callback='__tpx_jsonp_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
     const script=document.createElement('script');
-    const timeoutMs=method==='getCatalog'
-      ? 22000
-      : (method==='getImageMap'||method==='getVideoMap')
-        ? 28000
-        : method==='getCatalogBootstrap'
-          ? 35000
-          : 30000;
+    const timeoutMs=(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'||method==='keepAdminSessionAlive'||method==='getVersionInfo')
+      ? 15000
+      : method==='getCatalog'
+        ? 22000
+        : (method==='getImageMap'||method==='getVideoMap')
+          ? 28000
+          : method==='getCatalogBootstrap'
+            ? 35000
+            : 30000;
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao consultar o Apps Script.'));
@@ -1535,7 +1554,7 @@ async function refreshPublicDataInBackground(){
 
   const ativos=CATALOG.filter(p=>p.active!==false).length;
   $('status').textContent=`Catálogo sincronizado • ${ativos} ativos`;
-  $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():' • DB 1.3');
+  renderVersionBadge();
   setSyncProgress(100,'Catálogo pronto para uso.','complete');
 
   return results;
@@ -1639,7 +1658,7 @@ async function loadAll(forceAdmin=false){
     render();
 
     $('status').textContent='Catálogo disponível • verificando atualizações...';
-    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(cachedDb?' • DB '+cachedDb:' • DB 1.3');
+    renderVersionBadge();
     setSyncProgress(100,'Catálogo pronto. Atualizando dados em segundo plano...','complete');
 
     scheduleBackgroundSync(350);
@@ -2785,24 +2804,48 @@ $('adminBtn').onclick=async()=>{
   setTimeout(()=>$('adminPasswordInput').focus(),50);
 };
 
+
+async function refreshAdminCatalogQuietly(){
+  try{
+    $('status').textContent='Gerenciamento liberado • sincronizando dados...';
+    const cat=await apiJsonp('getCatalogAdmin',[adminPin]);
+    if(Array.isArray(cat)){
+      CATALOG=cat;
+      buildFilters();
+      render();
+      const ativos=CATALOG.filter(p=>p.active!==false).length;
+      const ocultos=CATALOG.filter(p=>p.active===false).length;
+      $('status').textContent=`Gerenciamento ativo • ${ativos} ativos • ${ocultos} ocultos`;
+    }
+  }catch(e){
+    console.warn('Catálogo gerencial ainda não sincronizou:',e);
+    $('status').textContent='Gerenciamento ativo • dados públicos disponíveis';
+  }
+  Promise.allSettled([api('getImageMap'),api('getVideoMap')]).then(results=>{
+    if(results[0].status==='fulfilled'){IMAGES=results[0].value||IMAGES;saveCachedImageMap(IMAGES);}
+    if(results[1].status==='fulfilled'){VIDEOS=results[1].value||VIDEOS;saveCachedVideoMap(VIDEOS);}
+    render();
+  });
+}
+
+
 async function submitAdminLogin(){
   const pin=$('adminPasswordInput').value;
   if(!pin){$('loginError').textContent='Digite a senha gerencial.';$('adminPasswordInput').focus();return;}
-  $('loginError').textContent='Validando acesso gerencial...';
+  $('loginError').textContent='Validando senha...';
   $('confirmAdminLogin').disabled=true;
   try{
-    const login=await api('adminLogin',pin);
+    const login=await apiJsonp('adminLoginQuick',[pin]);
     if(!login || login.valid!==true){
       $('loginError').textContent='Senha gerencial incorreta.';
       $('adminPasswordInput').select();
       return;
     }
 
-    adminPin=login.sessionToken||pin;
+    adminPin=login.sessionToken||'';
     adminSessionExpiresAt=Number(login.expiresAt)||0;
     storeAdminSession(adminPin,adminSessionExpiresAt);
     adminMode=true;
-    CATALOG=Array.isArray(login.catalog)?login.catalog:[];
     startAdminKeepAlive();
     markAdminActivity();
     $('adminLoginModal').classList.remove('show');
@@ -2815,12 +2858,15 @@ async function submitAdminLogin(){
     activeCat='Todos';
     buildFilters();
     render();
-    const ativos=CATALOG.filter(p=>p.active!==false).length;
-    const ocultos=CATALOG.filter(p=>p.active===false).length;
-    $('status').textContent=`Catálogo sincronizado • ${ativos} ativos • ${ocultos} ocultos`;
+    $('status').textContent='Gerenciamento liberado • sincronizando dados...';
     if(loadProductDraft()) restoreProductDraft();
-  }catch(e){adminMode=false;adminPin='';clearStoredAdminSession();$('loginError').textContent='Não foi possível validar o acesso. '+e.message;}
-  finally{$('confirmAdminLogin').disabled=false;}
+    refreshAdminCatalogQuietly();
+  }catch(e){
+    adminMode=false;adminPin='';clearStoredAdminSession();
+    $('loginError').textContent='Não foi possível validar o acesso. '+e.message;
+  }finally{
+    $('confirmAdminLogin').disabled=false;
+  }
 }
 $('confirmAdminLogin').onclick=submitAdminLogin;
 $('cancelAdminLogin').onclick=()=>{$('adminLoginModal').classList.remove('show');$('adminPasswordInput').value='';$('loginError').textContent='';};
@@ -3132,7 +3178,7 @@ async function refreshSecurity(){
   try{
     const [info,backs,trash]=await Promise.all([api('getSystemInfo',adminPin),api('listBackups',adminPin),api('getTrash',adminPin)]);
     $('sysVersion').textContent='v'+TPX_FRONTEND_VERSION+' (backend v'+info.systemVersion+')'; $('dbVersion').textContent='DB '+info.dbVersion;
-    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+' • DB '+info.dbVersion;
+    TPX_BACKEND_VERSION=String(info.systemVersion||TPX_BACKEND_VERSION||''); saveCachedDbVersion(String(info.dbVersion||'1.3')); renderVersionBadge();
     $('lastBackup').textContent=info.lastBackup ? new Date(info.lastBackup.createdAt).toLocaleString('pt-BR') : 'Nenhum';
     $('backupList').innerHTML='';
     if(!backs.length) $('backupList').innerHTML='<div class="small">Nenhum backup criado ainda.</div>';
@@ -3163,7 +3209,7 @@ $('securityBtn').onclick=openSecurity;
 $('closeSecurityBtn').onclick=()=>$('securityModal').classList.remove('show');
 $('refreshSecurityBtn').onclick=refreshSecurity;
 $('createBackupBtn').onclick=async()=>{try{const b=await api('createBackup','MANUAL',adminPin);alert('Backup criado: '+b.name);await refreshSecurity();}catch(e){alert('Falha no backup: '+e.message)}};
-$('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():'');
+renderVersionBadge();
 
 async function initializeApp(){
   applyPriceVisibility();
@@ -3192,6 +3238,7 @@ async function initializeApp(){
   }
 
   await loadAll();
+verifyBackendVersionInBackground();
 
   if(loadProductDraft()){
     $('loginError').textContent='Existe uma edição não concluída. Digite a senha gerencial para continuar exatamente de onde parou.';
