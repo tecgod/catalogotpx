@@ -1197,7 +1197,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.2';
+const TPX_FRONTEND_VERSION='1.6.3';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1457,7 +1457,9 @@ function apiPostConfirmed(method,args){
       ? 150000
       : (method==='adminLoginQuick'||method==='resumeAdminSessionQuick')
         ? 30000
-        : 45000;
+        : method==='saveProductReferenceImages'
+          ? 75000
+          : 45000;
 
     function cleanup(){
       if(pollTimer) clearTimeout(pollTimer);
@@ -1524,6 +1526,8 @@ function apiPostConfirmed(method,args){
           fail(new Error('A identificação demorou além do limite. Tente novamente com uma foto mais próxima e bem iluminada.'));
         }else if(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'){
           fail(new Error('O celular não recebeu a confirmação do login. Verifique se a implantação do Apps Script está atualizada e tente novamente.'));
+        }else if(method==='saveProductReferenceImages'){
+          fail(new Error('O envio da foto não chegou a ser confirmado pelo servidor. Tente novamente; a imagem será reduzida automaticamente para o celular.'));
         }else{
           fail(new Error('A operação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
         }
@@ -3054,6 +3058,26 @@ function selectExtraPhotoSource(slot,source){
   else $('photoExtraGalleryInput').click();
 }
 
+
+async function optimizedReferencePhoto(file){
+  // Fotos de câmera moderna podem gerar POSTs grandes demais para o iframe móvel.
+  // Reduz progressivamente até um payload seguro, preservando detalhe suficiente
+  // para encosto, base, braços, mecanismo e alavancas.
+  const attempts=[
+    [1000,.72],
+    [900,.68],
+    [800,.64],
+    [720,.60]
+  ];
+  const MAX_DATA_URL_CHARS=430000; // ~320 KB binários antes do overhead do formulário
+  let last='';
+  for(const [max,q] of attempts){
+    last=await optimized(file,max,q);
+    if(last.length<=MAX_DATA_URL_CHARS) return last;
+  }
+  return last;
+}
+
 async function saveExtraPhotoFile(file){
   if(!file || !extraPhotosProductKey || !extraPhotosCurrentSlot) return;
   const slot=extraPhotosCurrentSlot;
@@ -3066,7 +3090,7 @@ async function saveExtraPhotoFile(file){
     }
     adminPin=activeCredential;
     adminMode=true;
-    const dataUrl=await optimized(file,1400,.84);
+    const dataUrl=await optimizedReferencePhoto(file);
     const result=await apiPostConfirmed('saveProductReferenceImages',[extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',activeCredential]);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
     renderExtraPhotos();
