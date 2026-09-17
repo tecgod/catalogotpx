@@ -1243,7 +1243,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.7';
+const TPX_FRONTEND_VERSION='1.6.8';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -3208,7 +3208,6 @@ const EXTRA_PHOTO_SLOTS=[
   {key:'mechanism',title:'Opcional: mecanismo',sub:'Ajuda a diferenciar versões muito parecidas.'}
 ];
 
-
 function renderExtraPhotos(){
   const grid=$('extraPhotoGrid');
   grid.innerHTML='';
@@ -3222,55 +3221,58 @@ function renderExtraPhotos(){
       <div class="extra-photo-sub">${escapeHtml(slot.sub)}</div>
       <div class="extra-photo-preview">${hasPhoto?`<img src="${escapeHtml(ref.url)}" alt="${escapeHtml(slot.title)}">`:'Ainda sem foto extra'}</div>
       <div class="extra-photo-actions">
-        <button class="btn primary" type="button" data-extra-slot="${slot.key}" data-extra-source="camera">📸 ${hasPhoto?'Trocar pela câmera':'Adicionar pela câmera'}</button>
-        <button class="btn" type="button" data-extra-slot="${slot.key}" data-extra-source="gallery">🖼 ${hasPhoto?'Trocar pela galeria':'Galeria'}</button>
+        <button class="btn primary" type="button" data-extra-slot="${slot.key}" data-extra-source="camera">📸 ${hasPhoto?'Trocar':'Usar câmera'}</button>
+        <button class="btn" type="button" data-extra-slot="${slot.key}" data-extra-source="gallery">🖼 ${hasPhoto?'Trocar da galeria':'Galeria'}</button>
       </div>
-      ${hasPhoto?`<div class="extra-photo-actions"><button class="btn" type="button" data-extra-delete="${slot.key}">🗑 Excluir foto</button></div>`:''}
+      ${hasPhoto?`<div class="extra-photo-actions"><button class="btn" type="button" data-extra-delete="${slot.key}">🗑 Excluir</button></div>`:''}
       ${hasPhoto?`<button class="btn extra-photo-main-btn" type="button" data-extra-main="${slot.key}">Usar esta como foto principal</button>`:''}
     `;
     grid.appendChild(card);
   });
   grid.querySelectorAll('[data-extra-slot]').forEach(btn=>{
-    btn.onclick=()=>selectExtraPhotoSource(btn.dataset.extraSlot,btn.dataset.extraSource);
+    btn.onclick=()=>startExtraPhoto(btn.dataset.extraSlot,btn.dataset.extraSource);
   });
   grid.querySelectorAll('[data-extra-main]').forEach(btn=>{
     btn.onclick=()=>setExtraPhotoAsMain(btn.dataset.extraMain);
   });
   grid.querySelectorAll('[data-extra-delete]').forEach(btn=>{
-    btn.onclick=()=>deleteExtraPhoto(btn.dataset.extraDelete);
+    btn.onclick=()=>deleteExtraPhotoFast(btn.dataset.extraDelete);
   });
 }
 
-async function deleteExtraPhoto(slot){
+async function deleteExtraPhotoFast(slot){
   if(!extraPhotosProductKey) return;
-  const title=EXTRA_PHOTO_SLOTS.find(x=>x.key===slot)?.title||'esta foto';
-  if(!confirm(`Excluir a foto de ${title}?\n\nEla será removida deste produto e do carrossel.`)) return;
+  const item=EXTRA_PHOTO_SLOTS.find(x=>x.key===slot);
+  const title=item?item.title:'esta foto';
+  if(!confirm(`Excluir ${title}?\n\nEla sairá deste produto e do carrossel.`)) return;
+
+  const btn=$('extraPhotoGrid').querySelector(`[data-extra-delete="${slot}"]`);
+  const oldText=btn?btn.textContent:'';
   try{
+    if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
     const activeCredential=String(adminPin||getStoredAdminSession()||'').trim();
-    if(!activeCredential) throw new Error('Sessão gerencial não encontrada. Entre novamente em Gerenciar catálogo.');
+    if(!activeCredential) throw new Error('Sessão gerencial não encontrada.');
     adminPin=activeCredential;
-    adminMode=true;
+
     const result=await apiPostConfirmed('deleteProductReferenceImage',[extraPhotosProductKey,slot,activeCredential]);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
-    REFERENCE_IMAGES[extraPhotosProductKey]={primarySlot:extraPhotosState.primarySlot||'',refs:extraPhotosState.refs||{}};
+    REFERENCE_IMAGES[extraPhotosProductKey]={primarySlot:extraPhotosState.primarySlot,refs:extraPhotosState.refs};
     saveCachedReferenceImageMap(REFERENCE_IMAGES);
 
-    // Atualiza a foto principal também, caso a referência excluída estivesse sendo usada como principal.
-    try{
-      const freshImages=await api('getImageMap');
-      if(freshImages && typeof freshImages==='object'){
-        IMAGES=freshImages;
-        saveCachedImageMap(IMAGES);
-      }
-    }catch(ignore){}
+    if(result && Object.prototype.hasOwnProperty.call(result,'mainUrl')){
+      if(result.mainUrl) IMAGES[extraPhotosProductKey]=result.mainUrl+'&t='+Date.now();
+      else delete IMAGES[extraPhotosProductKey];
+      saveCachedImageMap(IMAGES);
+    }
 
-    updateEditPhotoPreview();
     const current=IMAGES[extraPhotosProductKey]||'';
     $('extraCurrentPhoto').innerHTML=current?`<img src="${escapeHtml(current)}" alt="Foto atual">`:'<span>Sem foto atual</span>';
+    updateEditPhotoPreview();
     renderExtraPhotos();
     render();
   }catch(err){
     alert('Não foi possível excluir a foto. '+String(err&&err.message?err.message:err));
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
   }
 }
 
