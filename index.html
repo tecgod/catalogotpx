@@ -1197,7 +1197,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.4';
+const TPX_FRONTEND_VERSION='1.6.5';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1283,7 +1283,7 @@ function saveCachedImageMap(map){
 }
 
 
-const TPX_REFERENCE_IMAGE_CACHE_KEY='tpx_reference_image_map_cache_v1';
+const TPX_REFERENCE_IMAGE_CACHE_KEY='tpx_reference_image_map_cache_v2';
 function loadCachedReferenceImageMap(){
   try{
     const raw=localStorage.getItem(TPX_REFERENCE_IMAGE_CACHE_KEY);
@@ -2043,10 +2043,37 @@ function normalizeCatalogCardHeights(){
 }
 
 
+
+const TPX_REFERENCE_LOADING=new Set();
+async function ensureProductReferenceImagesLoaded(p){
+  if(!p || !p.img) return;
+  const key=p.img;
+  const existing=REFERENCE_IMAGES[key];
+  if(existing && existing.refs && Object.keys(existing.refs).length) return;
+  if(TPX_REFERENCE_LOADING.has(key)) return;
+  TPX_REFERENCE_LOADING.add(key);
+  try{
+    const result=await api('getProductReferenceImages',key);
+    if(result && result.refs && Object.keys(result.refs).length){
+      REFERENCE_IMAGES[key]={primarySlot:result.primarySlot||'',refs:result.refs};
+      saveCachedReferenceImageMap(REFERENCE_IMAGES);
+      render();
+    }
+  }catch(err){
+    console.warn('Não foi possível carregar fotos extras de '+key+':',err);
+  }finally{
+    TPX_REFERENCE_LOADING.delete(key);
+  }
+}
+
 function buildProductGallery(p,adminModeNow){
   const wrap=document.createElement('div');
   wrap.className='thumb-gallery';
   const sources=productGallerySources(p);
+  // Mesmo que o cache geral ainda esteja vazio, busca as fotos extras deste produto.
+  if(!REFERENCE_IMAGES[p.img] || !REFERENCE_IMAGES[p.img].refs || !Object.keys(REFERENCE_IMAGES[p.img].refs).length){
+    setTimeout(()=>ensureProductReferenceImagesLoaded(p),0);
+  }
   if(!sources.length){
     const ph=document.createElement('div');ph.className='thumb-empty';ph.textContent=adminModeNow?'Enviar foto':'Sem foto';ph.onclick=()=>{if(adminModeNow)choosePhoto(p)};wrap.appendChild(ph);return wrap;
   }
