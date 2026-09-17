@@ -500,7 +500,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 }
 
 
-/* TPX Identificador Mobile v1.5 */
+/* TPX Identificador Mobile v1.5.2 */
 .identify-btn{font-weight:700;border-color:var(--red);color:var(--red)}
 .identify-btn:hover{background:var(--red);color:#fff}
 .identifier-screen{position:fixed;inset:0;z-index:85;background:var(--bg);display:none;overflow:auto;-webkit-overflow-scrolling:touch}
@@ -673,9 +673,16 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
             <button type="button" id="identifierPjBtn" title="Pessoa Jurídica">PJ</button>
           </div>
         </div>
+        <div class="identifier-family" id="identifierFamily"></div>
         <div class="identifier-features-title">Características</div>
         <ul class="identifier-features" id="identifierFeatures"></ul>
         <div class="identifier-confidence" id="identifierConfidence"></div>
+        <div class="identifier-reason" id="identifierReason"></div>
+        <div class="identifier-similar-box" id="identifierSimilarBox" style="display:none">
+          <div class="identifier-features-title" style="margin-top:0">Modelos parecidos</div>
+          <div class="identifier-similar-note" id="identifierSimilarNote"></div>
+          <div class="identifier-similar-list" id="identifierSimilarList"></div>
+        </div>
         <div class="identifier-actions">
           <button class="btn primary" id="identifierAgainBtn" type="button">📸 Nova foto</button>
           <button class="btn" id="identifierCatalogBtn" type="button">Ver no catálogo</button>
@@ -1122,7 +1129,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.1';
+const TPX_FRONTEND_VERSION='1.5.2';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1909,6 +1916,7 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;',
 
 const TPX_IDENTIFIER_PIN_KEY='tpx_identifier_price_pin_session_v1';
 let identifierCurrentProduct=null;
+let identifierLastResult=null;
 let identifierPriceKind='PF';
 let identifierProgressTimers=[];
 
@@ -1925,8 +1933,9 @@ function setIdentifierProgress(text){
 function startIdentifierProgress(){
   clearIdentifierProgressTimers();
   setIdentifierProgress('Enviando a foto para análise...');
-  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Analisando formato, encosto, braços e base...'),5000));
-  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Comparando com os modelos cadastrados...'),12000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Reconhecendo a família da cadeira...'),3500));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Comparando apenas com os modelos mais parecidos...'),8000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Conferindo mecanismo, alavancas e base...'),18000));
   identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A IA ainda está comparando as referências. Só mais um momento...'),30000));
   identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A identificação está demorando mais que o normal. O sistema continua consultando o resultado...'),60000));
 }
@@ -1934,6 +1943,7 @@ function startIdentifierProgress(){
 function resetIdentifierView(){
   clearIdentifierProgressTimers();
   identifierCurrentProduct=null;
+  identifierLastResult=null;
   identifierPriceKind='PF';
   $('identifierStart').style.display='block';
   $('identifierPreviewBox').classList.remove('show');
@@ -1941,6 +1951,12 @@ function resetIdentifierView(){
   $('identifierResult').classList.remove('show');
   $('identifierError').classList.remove('show');
   $('identifierError').innerHTML='';
+  $('identifierFamily').textContent='';
+  $('identifierReason').textContent='';
+  $('identifierConfidence').textContent='';
+  $('identifierSimilarNote').textContent='';
+  $('identifierSimilarList').innerHTML='';
+  $('identifierSimilarBox').style.display='none';
   $('identifierPfBtn').classList.add('active');
   $('identifierPjBtn').classList.remove('active');
   $('identifierPreview').removeAttribute('src');
@@ -2015,24 +2031,91 @@ function setIdentifierPrice(kind){
   }
 }
 
+
+function applyIdentifierProduct(product){
+  if(!product) throw new Error('Produto inválido no identificador.');
+  identifierCurrentProduct=product;
+  $('identifierResultName').textContent=product.name||'Produto identificado';
+  $('identifierResultMeta').textContent=[product.cat,product.brand].filter(Boolean).join(' • ');
+  const src=IMAGES[product.img]||'';
+  if(src){$('identifierResultImg').src=src;$('identifierResultImg').style.display='block';}
+  else{$('identifierResultImg').removeAttribute('src');$('identifierResultImg').style.display='none';}
+  const features=Array.isArray(product.features)?product.features:[];
+  $('identifierFeatures').innerHTML=features.length?features.map(x=>'<li>'+escapeHtml(x)+'</li>').join(''):'<li>Sem características cadastradas.</li>';
+  setIdentifierPrice(identifierPriceKind||'PF');
+}
+
+function chooseIdentifierSimilar(id){
+  if(!identifierLastResult) return;
+  let selected=null;
+  if(identifierLastResult.product && identifierLastResult.product.id===id) selected=identifierLastResult.product;
+  if(!selected && Array.isArray(identifierLastResult.similarProducts)){
+    const hit=identifierLastResult.similarProducts.find(x=>x && x.product && x.product.id===id);
+    if(hit) selected=hit.product;
+  }
+  if(!selected && Array.isArray(identifierLastResult.alternatives)){
+    const hit=identifierLastResult.alternatives.find(x=>x && x.product && x.product.id===id);
+    if(hit) selected=hit.product;
+  }
+  if(!selected) return;
+  applyIdentifierProduct(selected);
+}
+
+function renderIdentifierSimilar(result){
+  const box=$('identifierSimilarBox');
+  const list=$('identifierSimilarList');
+  const note=$('identifierSimilarNote');
+  list.innerHTML='';
+  const familyLabel=result && result.familyLabel ? String(result.familyLabel) : '';
+  const items=Array.isArray(result && result.similarProducts) ? result.similarProducts : [];
+  if(!items.length){
+    box.style.display='none';
+    note.textContent='';
+    return;
+  }
+  note.textContent=familyLabel ? 'Outras versões parecidas da família '+familyLabel+'. Toque para abrir a ficha de outra opção.' : 'Outras opções parecidas encontradas.';
+  items.forEach(item=>{
+    if(!item || !item.product) return;
+    const row=document.createElement('div');
+    row.className='identifier-similar-item';
+    const main=document.createElement('div');
+    main.className='identifier-similar-item-main';
+    const name=document.createElement('div');
+    name.className='identifier-similar-name';
+    name.textContent=item.product.name || item.name || 'Modelo parecido';
+    const meta=document.createElement('div');
+    meta.className='identifier-similar-meta';
+    const parts=[];
+    if(item.confidence) parts.push(item.confidence+'%');
+    if(item.product && item.product.price!==null && typeof item.product.price!=='undefined') parts.push('PF '+money(item.product.price));
+    meta.textContent=parts.join(' • ');
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn';
+    btn.textContent='Abrir';
+    btn.onclick=()=>chooseIdentifierSimilar(item.product.id);
+    main.append(name,meta);
+    row.append(main,btn);
+    list.appendChild(row);
+  });
+  box.style.display='block';
+}
+
+
 function renderIdentifierResult(result){
   clearIdentifierProgressTimers();
   const p=result && result.product;
   if(!p) throw new Error('O identificador não retornou um produto válido.');
-  identifierCurrentProduct=p;
+  identifierLastResult=result;
   identifierPriceKind='PF';
   $('identifierLoading').classList.remove('show');
   $('identifierError').classList.remove('show');
-  $('identifierResultName').textContent=p.name||'Produto identificado';
-  $('identifierResultMeta').textContent=[p.cat,p.brand].filter(Boolean).join(' • ');
-  const src=IMAGES[p.img]||'';
-  if(src){$('identifierResultImg').src=src;$('identifierResultImg').style.display='block';}
-  else{$('identifierResultImg').removeAttribute('src');$('identifierResultImg').style.display='none';}
-  const features=Array.isArray(p.features)?p.features:[];
-  $('identifierFeatures').innerHTML=features.length?features.map(x=>'<li>'+escapeHtml(x)+'</li>').join(''):'<li>Sem características cadastradas.</li>';
+  $('identifierFamily').textContent=result.familyLabel ? ('Família visual: '+result.familyLabel) : '';
   const conf=Number(result.confidence)||0;
   $('identifierConfidence').textContent=conf ? 'Correspondência visual estimada: '+conf+'%' : '';
-  setIdentifierPrice('PF');
+  $('identifierReason').textContent=result.reason ? String(result.reason) : '';
+  applyIdentifierProduct(p);
+  renderIdentifierSimilar(result);
   $('identifierResult').classList.add('show');
 }
 
@@ -2049,7 +2132,7 @@ async function identifySelectedPhoto(file){
   try{
     const pin=await ensureIdentifierPin();
     if(!pin) throw new Error('Identificação cancelada.');
-    const dataUrl=await optimized(file,1280,.80);
+    const dataUrl=await optimized(file,960,.72);
     const result=await api('identifyChairPhoto',dataUrl,pin);
     renderIdentifierResult(result);
   }catch(e){
