@@ -500,7 +500,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 }
 
 
-/* TPX Identificador Mobile v1.5.2 */
+/* TPX Identificador Mobile v1.5.3 */
 .identify-btn{font-weight:700;border-color:var(--red);color:var(--red)}
 .identify-btn:hover{background:var(--red);color:#fff}
 .identifier-screen{position:fixed;inset:0;z-index:85;background:var(--bg);display:none;overflow:auto;-webkit-overflow-scrolling:touch}
@@ -1129,7 +1129,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.2';
+const TPX_FRONTEND_VERSION='1.5.3';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -2010,7 +2010,9 @@ function showIdentifierError(message){
   const box=$('identifierError');
   let msg=String(message||'Não foi possível identificar a cadeira.');
   if(msg.includes('IA_NAO_CONFIGURADA')){
-    msg='A câmera e a tela do identificador estão prontas, mas a IA ainda precisa ser ativada. Na planilha, abra Extensões > Apps Script, execute o sistema e use o menu “TPX Catálogo > Configurar IA / Gemini”.';
+    msg='A câmera e a tela do identificador estão prontas, mas a IA ainda precisa ser ativada. Na planilha, abra Extensões > Apps Script e use o menu “TPX Catálogo > Configurar IA / Gemini”.';
+  }else if(msg.includes('IA_TEMPORARIAMENTE_INDISPONIVEL') || msg.includes('503') || msg.toLowerCase().includes('high demand')){
+    msg='A IA do Google está temporariamente sobrecarregada. O sistema tentou novamente e também tentou modelos de reserva. Aguarde alguns segundos e fotografe de novo.';
   }
   box.innerHTML='<strong>Não foi possível concluir a identificação.</strong>'+escapeHtml(msg)+'<div style="margin-top:14px"><button class="btn primary" type="button" onclick="startIdentifierCamera()">Tentar outra foto</button></div>';
   box.classList.add('show');
@@ -2112,7 +2114,11 @@ function renderIdentifierResult(result){
   $('identifierError').classList.remove('show');
   $('identifierFamily').textContent=result.familyLabel ? ('Família visual: '+result.familyLabel) : '';
   const conf=Number(result.confidence)||0;
-  $('identifierConfidence').textContent=conf ? 'Correspondência visual estimada: '+conf+'%' : '';
+  if(result.preliminary){
+    $('identifierConfidence').textContent=conf ? 'Resultado preliminar • confiança estimada: '+conf+'%' : 'Resultado preliminar';
+  }else{
+    $('identifierConfidence').textContent=conf ? 'Correspondência visual estimada: '+conf+'%' : '';
+  }
   $('identifierReason').textContent=result.reason ? String(result.reason) : '';
   applyIdentifierProduct(p);
   renderIdentifierSimilar(result);
@@ -2121,6 +2127,14 @@ function renderIdentifierResult(result){
 
 async function identifySelectedPhoto(file){
   if(!file) return;
+  identifierCurrentProduct=null;
+  identifierLastResult=null;
+  identifierPriceKind='PF';
+  $('identifierSimilarList').innerHTML='';
+  $('identifierSimilarBox').style.display='none';
+  $('identifierConfidence').textContent='';
+  $('identifierReason').textContent='';
+  $('identifierFamily').textContent='';
   $('identifierStart').style.display='none';
   $('identifierError').classList.remove('show');
   $('identifierResult').classList.remove('show');
@@ -2132,7 +2146,7 @@ async function identifySelectedPhoto(file){
   try{
     const pin=await ensureIdentifierPin();
     if(!pin) throw new Error('Identificação cancelada.');
-    const dataUrl=await optimized(file,960,.72);
+    const dataUrl=await optimized(file,900,.70);
     const result=await api('identifyChairPhoto',dataUrl,pin);
     renderIdentifierResult(result);
   }catch(e){
