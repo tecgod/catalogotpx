@@ -550,6 +550,23 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
   .identifier-price{font-size:1.65rem}
 }
 
+
+.extra-photos-dialog{width:min(920px,100%)}
+.extra-current-main{margin:14px 0;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
+.extra-current-photo{margin-top:8px;width:150px;height:150px;border-radius:14px;overflow:hidden;background:#111;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:var(--soft);font-size:.85rem;text-align:center}
+.extra-current-photo img{width:100%;height:100%;object-fit:cover}
+.extra-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.extra-photo-card{border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px;background:rgba(255,255,255,.03)}
+.extra-photo-title{font-weight:800;margin-bottom:4px}
+.extra-photo-sub{font-size:.82rem;color:var(--soft);margin-bottom:9px}
+.extra-photo-preview{width:100%;aspect-ratio:4/3;border-radius:14px;background:#111;border:1px dashed rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--soft);font-size:.88rem;text-align:center;padding:8px}
+.extra-photo-preview img{width:100%;height:100%;object-fit:cover}
+.extra-photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.extra-photo-actions .btn{flex:1 1 120px}
+.extra-photo-main-btn{width:100%;margin-top:8px}
+.extra-photo-tip{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);font-size:.88rem;color:var(--soft);line-height:1.45}
+@media (max-width:680px){.extra-photo-grid{grid-template-columns:1fr}.extra-current-photo{width:120px;height:120px}}
+
 </style>
 </head>
 <body>
@@ -627,6 +644,8 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 </div>
 
 <input type="file" id="fileInput" accept="image/*" hidden>
+<input type="file" id="photoExtraCameraInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="photoExtraGalleryInput" accept="image/*" hidden>
 <input type="file" id="identifierInput" accept="image/*" capture="environment" hidden>
 
 
@@ -851,8 +870,9 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <div class="edit-photo-empty" id="editPhotoEmpty">Sem foto cadastrada</div>
   </div>
   <div class="edit-photo-actions">
-    <button class="btn" type="button" id="editPhotoChangeBtn">Trocar / cadastrar foto</button>
-    <span class="small">Visualização ampliada da foto atual do produto.</span>
+    <button class="btn" type="button" id="editPhotoChangeBtn">Trocar foto principal</button>
+    <button class="btn primary" type="button" id="editExtraPhotosBtn">📸 Adicionar 3 fotos pela câmera</button>
+    <span class="small">A foto atual permanece. Adicione fotos extras para melhorar a identificação.</span>
   </div>
 </div>
 <div class="grid2">
@@ -901,6 +921,20 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 </div></div>
 
 
+
+<div class="modal" id="extraPhotosModal"><div class="dialog extra-photos-dialog">
+  <h2>Adicionar fotos da cadeira</h2>
+  <p class="admin-login-sub" id="extraPhotosSubtitle">A foto atual será mantida. Tire mais 3 fotos direto pelo celular.</p>
+  <div class="extra-current-main">
+    <strong>Foto atual do catálogo</strong>
+    <div class="extra-current-photo" id="extraCurrentPhoto"><span>Sem foto atual</span></div>
+    <div class="small">Esta foto não será apagada ao adicionar as novas.</div>
+  </div>
+  <div class="extra-photo-grid" id="extraPhotoGrid"></div>
+  <div class="extra-photo-tip">Sugestão: Frente, Lado e 45°. Para modelos muito parecidos, adicione também Mecanismo/Alavanca.</div>
+  <div class="dialog-actions"><button class="btn" type="button" id="closeExtraPhotosBtn">Fechar</button></div>
+</div></div>
+
 <div class="modal" id="securityModal"><div class="dialog">
 <h2>Backup e Segurança</h2>
 <div class="security-grid">
@@ -927,6 +961,9 @@ const INITIAL_FALLBACK = [{"name": "Unique sem braço", "price": 699, "cat": "Li
 
 let CATALOG=[], IMAGES={}, VIDEOS={}, adminPin='', adminMode=false, showDetails=true;
 let activeType='Todos', activeCat='Todos', activeMechanism='Todos', pendingImageKey=null;
+let extraPhotosProductKey='';
+let extraPhotosState={primarySlot:'',refs:{}};
+let extraPhotosCurrentSlot='';
 let activeNr='Todas';
 let pricesHidden = localStorage.getItem('tpx_prices_hidden') === '1';
 const revealedPriceIds = new Set();
@@ -1121,7 +1158,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.8';
+const TPX_FRONTEND_VERSION='1.6.0';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1274,7 +1311,7 @@ async function api(method,...args){
     await ensureAdminSession();
   }
 
-  if(method==='getCatalogAdmin'){
+  if(method==='getCatalogAdmin' || method==='getProductReferenceImages'){
     return apiJsonp(method,args);
   }
 
@@ -2921,6 +2958,97 @@ function updateEditPhotoPreview(){
   }
 }
 
+
+const EXTRA_PHOTO_SLOTS=[
+  {key:'front',title:'1. Frente',sub:'Fotografe a cadeira de frente.'},
+  {key:'side',title:'2. Lado',sub:'Mostre braços, assento e alavancas laterais.'},
+  {key:'angle45',title:'3. 45°',sub:'Pegue frente e lateral na mesma imagem.'},
+  {key:'mechanism',title:'Opcional: mecanismo',sub:'Ajuda a diferenciar versões muito parecidas.'}
+];
+
+function renderExtraPhotos(){
+  const grid=$('extraPhotoGrid');
+  grid.innerHTML='';
+  EXTRA_PHOTO_SLOTS.forEach(slot=>{
+    const ref=extraPhotosState.refs&&extraPhotosState.refs[slot.key]?extraPhotosState.refs[slot.key]:null;
+    const card=document.createElement('div');
+    card.className='extra-photo-card';
+    card.innerHTML=`
+      <div class="extra-photo-title">${escapeHtml(slot.title)}</div>
+      <div class="extra-photo-sub">${escapeHtml(slot.sub)}</div>
+      <div class="extra-photo-preview">${ref&&ref.url?`<img src="${escapeHtml(ref.url)}" alt="${escapeHtml(slot.title)}">`:'Ainda sem foto extra'}</div>
+      <div class="extra-photo-actions">
+        <button class="btn primary" type="button" data-extra-slot="${slot.key}" data-extra-source="camera">📸 Usar câmera</button>
+        <button class="btn" type="button" data-extra-slot="${slot.key}" data-extra-source="gallery">🖼 Galeria</button>
+      </div>
+      ${ref&&ref.url?`<button class="btn extra-photo-main-btn" type="button" data-extra-main="${slot.key}">Usar esta como foto principal</button>`:''}
+    `;
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('[data-extra-slot]').forEach(btn=>{
+    btn.onclick=()=>selectExtraPhotoSource(btn.dataset.extraSlot,btn.dataset.extraSource);
+  });
+  grid.querySelectorAll('[data-extra-main]').forEach(btn=>{
+    btn.onclick=()=>setExtraPhotoAsMain(btn.dataset.extraMain);
+  });
+}
+
+async function openExtraPhotosManager(){
+  const key=$('fImg')?.value?.trim();
+  if(!key){ alert('Salve o produto primeiro para gerar a chave da imagem.'); return; }
+  extraPhotosProductKey=key;
+  $('extraPhotosSubtitle').textContent='A foto atual de '+(($('fName').value||'').trim()||'este produto')+' será mantida. Tire mais 3 fotos usando a câmera do celular.';
+  const current=IMAGES[key]||'';
+  $('extraCurrentPhoto').innerHTML=current?`<img src="${escapeHtml(current)}" alt="Foto atual">`:'<span>Sem foto atual</span>';
+  try{
+    const result=await api('getProductReferenceImages',key);
+    extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
+  }catch(err){ extraPhotosState={primarySlot:'',refs:{}}; }
+  renderExtraPhotos();
+  $('extraPhotosModal').classList.add('show');
+}
+
+function selectExtraPhotoSource(slot,source){
+  extraPhotosCurrentSlot=slot;
+  if(source==='camera') $('photoExtraCameraInput').click();
+  else $('photoExtraGalleryInput').click();
+}
+
+async function saveExtraPhotoFile(file){
+  if(!file || !extraPhotosProductKey || !extraPhotosCurrentSlot) return;
+  const slot=extraPhotosCurrentSlot;
+  try{
+    const dataUrl=await optimized(file,1400,.84);
+    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',adminPin);
+    extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
+    renderExtraPhotos();
+    alert('Foto adicionada com sucesso. A foto principal do catálogo foi mantida.');
+  }catch(err){ alert('Não foi possível adicionar a foto. '+err.message); }
+  finally{
+    extraPhotosCurrentSlot='';
+    $('photoExtraCameraInput').value='';
+    $('photoExtraGalleryInput').value='';
+  }
+}
+
+async function setExtraPhotoAsMain(slot){
+  if(!extraPhotosProductKey) return;
+  if(!confirm('Usar esta foto como principal do catálogo?')) return;
+  try{
+    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[],slot,adminPin);
+    extraPhotosState={primarySlot:(result&&result.primarySlot)||slot,refs:(result&&result.refs)||extraPhotosState.refs||{}};
+    const ref=extraPhotosState.refs[slot];
+    if(ref&&ref.url){
+      IMAGES[extraPhotosProductKey]=ref.url+'&t='+Date.now();
+      saveCachedImageMap(IMAGES);
+      updateEditPhotoPreview();
+      $('extraCurrentPhoto').innerHTML=`<img src="${escapeHtml(IMAGES[extraPhotosProductKey])}" alt="Foto atual">`;
+      render();
+    }
+    renderExtraPhotos();
+  }catch(err){ alert('Não foi possível trocar a foto principal. '+err.message); }
+}
+
 function choosePhotoFromEditor(){
   const key=$('fImg')?.value?.trim();
   if(!key){
@@ -2954,6 +3082,11 @@ $('cancelModal').onclick=()=>{
 
 $('editPhotoFrame').onclick=choosePhotoFromEditor;
 $('editPhotoChangeBtn').onclick=choosePhotoFromEditor;
+$('editExtraPhotosBtn').onclick=openExtraPhotosManager;
+$('closeExtraPhotosBtn').onclick=()=>{$('extraPhotosModal').classList.remove('show');};
+$('extraPhotosModal').addEventListener('click',e=>{if(e.target===$('extraPhotosModal')) $('extraPhotosModal').classList.remove('show');});
+$('photoExtraCameraInput').onchange=e=>saveExtraPhotoFile(e.target.files&&e.target.files[0]);
+$('photoExtraGalleryInput').onchange=e=>saveExtraPhotoFile(e.target.files&&e.target.files[0]);
 $('fImg').addEventListener('input',updateEditPhotoPreview);
 
 
