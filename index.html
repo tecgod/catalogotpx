@@ -1243,7 +1243,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.8';
+const TPX_FRONTEND_VERSION='1.6.9';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -2251,9 +2251,9 @@ function setIdentifierProgress(text){
 function startIdentifierProgress(){
   clearIdentifierProgressTimers();
   setIdentifierProgress('Enviando a foto para análise...');
-  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Reconhecendo a família da cadeira...'),3500));
-  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Comparando apenas com os modelos mais parecidos...'),8000));
-  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Conferindo mecanismo, alavancas e base...'),18000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Fazendo triagem rápida...'),2200));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Conferindo os modelos mais próximos...'),6000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Comparando mecanismo e detalhes...'),12000));
   identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A IA ainda está comparando as referências. Só mais um momento...'),30000));
   identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A identificação está demorando mais que o normal. O sistema continua consultando o resultado...'),60000));
 }
