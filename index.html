@@ -498,6 +498,58 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
   .thumb-wrap{width:120px;height:150px}
   .thumb,.thumb-empty{height:150px}
 }
+
+
+/* TPX Identificador Mobile v1.5 */
+.identify-btn{font-weight:700;border-color:var(--red);color:var(--red)}
+.identify-btn:hover{background:var(--red);color:#fff}
+.identifier-screen{position:fixed;inset:0;z-index:85;background:var(--bg);display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+.identifier-screen.show{display:block}
+.identifier-shell{max-width:720px;margin:0 auto;min-height:100vh;padding:18px 16px 34px}
+.identifier-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
+.identifier-head h2{font-family:Georgia,serif;font-weight:400;margin:0;font-size:1.35rem}
+.identifier-close{border:0;background:transparent;font-size:1.7rem;padding:6px 8px;color:var(--soft)}
+.identifier-start{text-align:center;background:#fff;border:1px solid var(--line);padding:28px 18px;border-radius:14px}
+.identifier-camera-icon{font-size:3.4rem;line-height:1;margin-bottom:12px}
+.identifier-start h3{font-family:Georgia,serif;font-size:1.35rem;font-weight:400;margin:0 0 8px}
+.identifier-start p{color:var(--soft);line-height:1.45;margin:0 auto 18px;max-width:430px}
+.identifier-main-btn{width:100%;max-width:420px;padding:16px 18px;font-size:1.05rem;border-radius:10px}
+.identifier-preview{display:none;margin:0 0 14px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.identifier-preview.show{display:block}
+.identifier-preview img{display:block;width:100%;max-height:380px;object-fit:contain;border-radius:9px;background:#f7f6f3}
+.identifier-loading{display:none;text-align:center;padding:28px 16px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.identifier-loading.show{display:block}
+.identifier-spinner{width:42px;height:42px;border:4px solid #e5e0d8;border-top-color:var(--red);border-radius:50%;margin:0 auto 12px;animation:tpxSpin .85s linear infinite}
+@keyframes tpxSpin{to{transform:rotate(360deg)}}
+.identifier-result{display:none;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.identifier-result.show{display:block}
+.identifier-result-photo{width:100%;height:280px;background:#f7f6f3;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line)}
+.identifier-result-photo img{width:100%;height:100%;object-fit:contain;padding:12px}
+.identifier-result-body{padding:18px}
+.identifier-result-title{font-family:Georgia,serif;font-size:1.55rem;font-weight:400;margin:0 0 5px}
+.identifier-meta{font-size:.78rem;color:var(--soft);text-transform:uppercase;margin-bottom:14px}
+.identifier-price-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;margin-bottom:14px}
+.identifier-price-label{font-size:.72rem;color:var(--soft);text-transform:uppercase;margin-bottom:3px}
+.identifier-price{font-size:1.9rem;font-weight:800;color:var(--red2);line-height:1.1}
+.price-kind-toggle{display:flex;gap:3px;align-items:center;background:#f1eee8;border-radius:999px;padding:3px;flex:0 0 auto}
+.price-kind-toggle button{border:0;background:transparent;color:#777;font-size:.62rem;font-weight:800;letter-spacing:.04em;padding:5px 7px;border-radius:999px;min-width:29px}
+.price-kind-toggle button.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.identifier-features-title{font-size:.78rem;text-transform:uppercase;color:var(--soft);font-weight:700;margin:0 0 8px}
+.identifier-features{margin:0;padding-left:20px;line-height:1.55;font-size:.95rem}
+.identifier-confidence{font-size:.72rem;color:var(--soft);margin-top:12px}
+.identifier-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.identifier-actions .btn{padding:12px 10px}
+.identifier-error{display:none;background:#fff;border:1px solid #efc8c8;border-radius:14px;padding:20px;color:#7d0d15;line-height:1.45}
+.identifier-error.show{display:block}
+.identifier-error strong{display:block;margin-bottom:6px}
+@media(max-width:650px){
+  .toolbar .identify-btn{order:-1;width:100%;padding:13px 14px;font-size:1rem}
+  .identifier-shell{padding:12px 12px 28px}
+  .identifier-result-photo{height:235px}
+  .identifier-result-title{font-size:1.35rem}
+  .identifier-price{font-size:1.65rem}
+}
+
 </style>
 </head>
 <body>
@@ -534,6 +586,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 </div>
 
 <div class="toolbar">
+<button class="btn identify-btn" id="identifyBtn" type="button">📸 Identificar cadeira</button>
 <button class="btn" id="detailsBtn">Com detalhes</button>
 <button class="btn" id="printSelectedBtn" type="button" title="Imprimir a lista atualmente selecionada">🖨️ Imprimir seleção</button>
 <button class="btn" id="manualBtn" type="button" title="Abrir o manual de utilização">📘 Manual de uso</button>
@@ -574,7 +627,63 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 </div>
 
 <input type="file" id="fileInput" accept="image/*" hidden>
+<input type="file" id="identifierInput" accept="image/*" capture="environment" hidden>
 
+
+
+<div class="identifier-screen" id="identifierScreen" aria-hidden="true">
+  <div class="identifier-shell">
+    <div class="identifier-head">
+      <div>
+        <h2>Identificador de Cadeiras</h2>
+        <div class="small">TPX Office • câmera do celular</div>
+      </div>
+      <button class="identifier-close" id="identifierCloseBtn" type="button" aria-label="Fechar">×</button>
+    </div>
+
+    <div class="identifier-start" id="identifierStart">
+      <div class="identifier-camera-icon">📸</div>
+      <h3>Aponte para a cadeira</h3>
+      <p>Fotografe a cadeira inteira, de preferência de frente ou em 45°. O sistema vai procurar o modelo no catálogo.</p>
+      <button class="btn primary identifier-main-btn" id="identifierTakePhotoBtn" type="button">Abrir câmera e identificar</button>
+    </div>
+
+    <div class="identifier-preview" id="identifierPreviewBox"><img id="identifierPreview" alt="Foto tirada para identificação"></div>
+
+    <div class="identifier-loading" id="identifierLoading">
+      <div class="identifier-spinner"></div>
+      <strong>Identificando cadeira...</strong>
+      <div class="small" style="margin-top:6px">Comparando a foto com os modelos cadastrados.</div>
+    </div>
+
+    <div class="identifier-error" id="identifierError"></div>
+
+    <div class="identifier-result" id="identifierResult">
+      <div class="identifier-result-photo"><img id="identifierResultImg" alt="Produto identificado"></div>
+      <div class="identifier-result-body">
+        <h3 class="identifier-result-title" id="identifierResultName"></h3>
+        <div class="identifier-meta" id="identifierResultMeta"></div>
+        <div class="identifier-price-row">
+          <div>
+            <div class="identifier-price-label" id="identifierPriceLabel">Preço pessoa física</div>
+            <div class="identifier-price" id="identifierPrice"></div>
+          </div>
+          <div class="price-kind-toggle" aria-label="Tipo de preço">
+            <button type="button" id="identifierPfBtn" class="active" title="Pessoa Física">PF</button>
+            <button type="button" id="identifierPjBtn" title="Pessoa Jurídica">PJ</button>
+          </div>
+        </div>
+        <div class="identifier-features-title">Características</div>
+        <ul class="identifier-features" id="identifierFeatures"></ul>
+        <div class="identifier-confidence" id="identifierConfidence"></div>
+        <div class="identifier-actions">
+          <button class="btn primary" id="identifierAgainBtn" type="button">📸 Nova foto</button>
+          <button class="btn" id="identifierCatalogBtn" type="button">Ver no catálogo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="adminLoginModal"><div class="dialog admin-login-dialog">
   <div class="admin-lock" aria-hidden="true">🔐</div>
@@ -692,13 +801,16 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <h3>6. Impressão da seleção</h3>
     <p>Primeiro faça a busca e os filtros desejados. Depois clique em “Imprimir seleção”. É possível escolher foto, preço, NRs e detalhes, definir a orientação Retrato ou Paisagem e escolher o modo Colorido, Escala de cinza ou Preto e branco. No modo Paisagem os cards ganham mais largura e a área da foto é ampliada. No modo Colorido o preço mantém o vermelho usado no catálogo. A impressão contém apenas os produtos selecionados pelos filtros.</p>
 
-    <h3>7. Área gerencial</h3>
+    <h3>7. Identificador de cadeiras</h3>
+    <p>No celular, use “Identificar cadeira” para abrir a câmera traseira. O resultado mostra o produto, preço PF por padrão, opção discreta PF/PJ e as características cadastradas. Na primeira identificação da sessão, a senha de consulta protege o uso da IA.</p>
+
+    <h3>8. Área gerencial</h3>
     <p>O botão “Gerenciar catálogo” abre o acesso restrito. Após autenticação, é possível cadastrar produtos, alterar nome, preço, tipo, categoria, marca, características, classificação de NRs, confiança ergonômica e status da análise.</p>
 
-    <h3>8. Fotos e vídeos</h3>
+    <h3>9. Fotos e vídeos</h3>
     <p>Na área gerencial é possível cadastrar ou substituir a foto e associar um link de vídeo ao produto. Quando houver vídeo, o cliente verá o botão “Ver vídeo”. Dentro da janela do vídeo existem opções separadas para WhatsApp, Copiar link, Compartilhar, Abrir vídeo e, quando a origem permitir, Baixar vídeo. A tecla Esc fecha tanto a visualização ampliada da foto quanto a janela do vídeo. O vídeo só é carregado quando “Ver vídeo” é acionado, preservando a velocidade do catálogo.</p>
 
-    <h3>9. Ocultar, reativar e excluir</h3>
+    <h3>10. Ocultar, reativar e excluir</h3>
     <p>Produtos podem ser ocultados sem exclusão definitiva. Produtos enviados à lixeira podem ser restaurados ou excluídos definitivamente pela área de Backup e Segurança.</p>
 
     <h3>10. NRs e ergonomia</h3>
@@ -738,7 +850,8 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 </div>
 <div class="grid2">
 <div class="field"><label>Nome do produto</label><input id="fName"></div>
-<div class="field"><label>Preço (R$)</label><input id="fPrice" inputmode="decimal"></div>
+<div class="field"><label>Preço PF (R$)</label><input id="fPrice" inputmode="decimal"></div>
+<div class="field"><label>Preço PJ (R$)</label><input id="fPricePJ" inputmode="decimal" placeholder="Opcional"></div>
 <div class="field"><label>Tipo</label><select id="fType"><option>Cadeiras</option><option>Mesas</option><option>Longarinas</option><option>Sofás</option><option>Armários</option><option>Outros</option></select></div>
 <div class="field"><label>Linha / categoria</label><input id="fCat" placeholder="Ex.: Linha Office"></div>
 <div class="field"><label>Marca</label><input id="fBrand" placeholder="Opcional"></div>
@@ -843,6 +956,7 @@ function collectProductDraft(){
     editId:$('editId').value,
     fName:$('fName').value,
     fPrice:$('fPrice').value,
+    fPricePJ:$('fPricePJ').value,
     fType:$('fType').value,
     fCat:$('fCat').value,
     fBrand:$('fBrand').value,
@@ -885,6 +999,7 @@ function restoreProductDraft(){
   $('modalTitle').textContent=draft.editId?'Editar produto':'Novo produto';
   $('fName').value=draft.fName||'';
   $('fPrice').value=draft.fPrice??'';
+  $('fPricePJ').value=draft.fPricePJ??'';
   $('fType').value=draft.fType||'Cadeiras';
   $('fCat').value=draft.fCat||'';
   $('fBrand').value=draft.fBrand||'';
@@ -1007,7 +1122,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.4.11';
+const TPX_FRONTEND_VERSION='1.5.0';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1324,7 +1439,7 @@ function apiPost(method,args){
     input('method',method);
     input('args',JSON.stringify(args||[]));
 
-    const postTimeoutMs=(method==='saveProductWithVideo'||method==='saveProductImage')?75000:60000;
+    const postTimeoutMs=method==='identifyChairPhoto'?120000:((method==='saveProductWithVideo'||method==='saveProductImage')?75000:60000);
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao executar a operação.'));
@@ -1413,7 +1528,7 @@ async function refreshPublicDataInBackground(){
 
   const ativos=CATALOG.filter(p=>p.active!==false).length;
   $('status').textContent=`Catálogo sincronizado • ${ativos} ativos`;
-  $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():' • DB 1.2');
+  $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(loadCachedDbVersion()?' • DB '+loadCachedDbVersion():' • DB 1.3');
   setSyncProgress(100,'Catálogo pronto para uso.','complete');
 
   return results;
@@ -1517,7 +1632,7 @@ async function loadAll(forceAdmin=false){
     render();
 
     $('status').textContent='Catálogo disponível • verificando atualizações...';
-    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(cachedDb?' • DB '+cachedDb:' • DB 1.2');
+    $('versionBadge').textContent='TPX Catálogo • v'+TPX_FRONTEND_VERSION+(cachedDb?' • DB '+cachedDb:' • DB 1.3');
     setSyncProgress(100,'Catálogo pronto. Atualizando dados em segundo plano...','complete');
 
     scheduleBackgroundSync(350);
@@ -1790,6 +1905,152 @@ function render(){
 function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
 
+
+
+const TPX_IDENTIFIER_PIN_KEY='tpx_identifier_price_pin_session_v1';
+let identifierCurrentProduct=null;
+let identifierPriceKind='PF';
+
+function resetIdentifierView(){
+  identifierCurrentProduct=null;
+  identifierPriceKind='PF';
+  $('identifierStart').style.display='block';
+  $('identifierPreviewBox').classList.remove('show');
+  $('identifierLoading').classList.remove('show');
+  $('identifierResult').classList.remove('show');
+  $('identifierError').classList.remove('show');
+  $('identifierError').innerHTML='';
+  $('identifierPfBtn').classList.add('active');
+  $('identifierPjBtn').classList.remove('active');
+  $('identifierPreview').removeAttribute('src');
+}
+
+function openIdentifier(){
+  resetIdentifierView();
+  $('identifierScreen').classList.add('show');
+  $('identifierScreen').setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+}
+
+function closeIdentifier(){
+  $('identifierScreen').classList.remove('show');
+  $('identifierScreen').setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+  if($('identifierInput')) $('identifierInput').value='';
+}
+
+async function ensureIdentifierPin(){
+  let pin='';
+  try{pin=sessionStorage.getItem(TPX_IDENTIFIER_PIN_KEY)||'';}catch(e){}
+  if(pin){
+    try{if(await apiJsonp('verifyPricePin',[pin])) return pin;}catch(e){}
+    try{sessionStorage.removeItem(TPX_IDENTIFIER_PIN_KEY);}catch(e){}
+  }
+  pin=prompt('Para proteger o uso da identificação por IA, digite a senha de consulta de preço. Você precisará informar apenas uma vez nesta sessão:')||'';
+  if(!pin) return '';
+  let ok=false;
+  try{ok=await apiJsonp('verifyPricePin',[pin]);}catch(e){throw new Error('Não foi possível validar a senha de consulta.');}
+  if(!ok) throw new Error('Senha de consulta incorreta.');
+  try{sessionStorage.setItem(TPX_IDENTIFIER_PIN_KEY,pin);}catch(e){}
+  return pin;
+}
+
+async function startIdentifierCamera(){
+  try{
+    await ensureIdentifierPin();
+    $('identifierInput').click();
+  }catch(e){
+    showIdentifierError(e.message||String(e));
+  }
+}
+
+function showIdentifierError(message){
+  $('identifierStart').style.display='none';
+  $('identifierLoading').classList.remove('show');
+  $('identifierResult').classList.remove('show');
+  const box=$('identifierError');
+  let msg=String(message||'Não foi possível identificar a cadeira.');
+  if(msg.includes('IA_NAO_CONFIGURADA')){
+    msg='A câmera e a tela do identificador estão prontas, mas a IA ainda precisa ser ativada. Na planilha, abra Extensões > Apps Script, execute o sistema e use o menu “TPX Catálogo > Configurar IA / Gemini”.';
+  }
+  box.innerHTML='<strong>Não foi possível concluir a identificação.</strong>'+escapeHtml(msg)+'<div style="margin-top:14px"><button class="btn primary" type="button" onclick="startIdentifierCamera()">Tentar outra foto</button></div>';
+  box.classList.add('show');
+}
+
+function setIdentifierPrice(kind){
+  if(!identifierCurrentProduct) return;
+  identifierPriceKind=kind==='PJ'?'PJ':'PF';
+  $('identifierPfBtn').classList.toggle('active',identifierPriceKind==='PF');
+  $('identifierPjBtn').classList.toggle('active',identifierPriceKind==='PJ');
+  const p=identifierCurrentProduct;
+  if(identifierPriceKind==='PJ'){
+    $('identifierPriceLabel').textContent='Preço pessoa jurídica';
+    $('identifierPrice').textContent=(p.pricePJ===null || typeof p.pricePJ==='undefined')?'Não cadastrado':money(p.pricePJ);
+  }else{
+    $('identifierPriceLabel').textContent='Preço pessoa física';
+    $('identifierPrice').textContent=money(p.price);
+  }
+}
+
+function renderIdentifierResult(result){
+  const p=result && result.product;
+  if(!p) throw new Error('O identificador não retornou um produto válido.');
+  identifierCurrentProduct=p;
+  identifierPriceKind='PF';
+  $('identifierLoading').classList.remove('show');
+  $('identifierError').classList.remove('show');
+  $('identifierResultName').textContent=p.name||'Produto identificado';
+  $('identifierResultMeta').textContent=[p.cat,p.brand].filter(Boolean).join(' • ');
+  const src=IMAGES[p.img]||'';
+  if(src){$('identifierResultImg').src=src;$('identifierResultImg').style.display='block';}
+  else{$('identifierResultImg').removeAttribute('src');$('identifierResultImg').style.display='none';}
+  const features=Array.isArray(p.features)?p.features:[];
+  $('identifierFeatures').innerHTML=features.length?features.map(x=>'<li>'+escapeHtml(x)+'</li>').join(''):'<li>Sem características cadastradas.</li>';
+  const conf=Number(result.confidence)||0;
+  $('identifierConfidence').textContent=conf ? 'Correspondência visual estimada: '+conf+'%' : '';
+  setIdentifierPrice('PF');
+  $('identifierResult').classList.add('show');
+}
+
+async function identifySelectedPhoto(file){
+  if(!file) return;
+  $('identifierStart').style.display='none';
+  $('identifierError').classList.remove('show');
+  $('identifierResult').classList.remove('show');
+  const localUrl=URL.createObjectURL(file);
+  $('identifierPreview').src=localUrl;
+  $('identifierPreviewBox').classList.add('show');
+  $('identifierLoading').classList.add('show');
+  try{
+    const pin=await ensureIdentifierPin();
+    if(!pin) throw new Error('Identificação cancelada.');
+    const dataUrl=await optimized(file,1280,.80);
+    const result=await api('identifyChairPhoto',dataUrl,pin);
+    renderIdentifierResult(result);
+  }catch(e){
+    showIdentifierError(e.message||String(e));
+  }finally{
+    $('identifierLoading').classList.remove('show');
+    setTimeout(()=>URL.revokeObjectURL(localUrl),3000);
+    $('identifierInput').value='';
+  }
+}
+
+$('identifyBtn').onclick=openIdentifier;
+$('identifierCloseBtn').onclick=closeIdentifier;
+$('identifierTakePhotoBtn').onclick=startIdentifierCamera;
+$('identifierAgainBtn').onclick=startIdentifierCamera;
+$('identifierPfBtn').onclick=()=>setIdentifierPrice('PF');
+$('identifierPjBtn').onclick=()=>setIdentifierPrice('PJ');
+$('identifierInput').onchange=e=>identifySelectedPhoto(e.target.files&&e.target.files[0]);
+$('identifierCatalogBtn').onclick=()=>{
+  if(!identifierCurrentProduct) return;
+  closeIdentifier();
+  $('searchInput').value=identifierCurrentProduct.name;
+  buildFilters();
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
 
 let currentVideoProduct=null;
 let currentVideoSource=null;
@@ -2499,7 +2760,7 @@ function choosePhotoFromEditor(){
 
 function openProduct(p){
   $('modalTitle').textContent=p?'Editar produto':'Novo produto'; $('editId').value=p?.id||'';
-  $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fType').value=p?.type||'Cadeiras';
+  $('fName').value=p?.name||''; $('fPrice').value=p?.price??''; $('fPricePJ').value=p?.pricePJ??''; $('fType').value=p?.type||'Cadeiras';
   $('fCat').value=p?.cat||''; $('fBrand').value=p?.brand||''; $('fImg').value=p?.img||''; const pnrs=Array.isArray(p?.nrs)?p.nrs:[]; $('fNr1').checked=pnrs.includes('NR-1'); $('fNr17').checked=pnrs.includes('NR-17'); $('fErgoConfidence').value=p?.ergoConfidence||'Não avaliado'; $('fErgoStatus').value=p?.ergoStatus||'Sugerido automaticamente'; $('fVideoUrl').value=p?.id?(VIDEOS[p.id]||''):''; $('fFeatures').value=(p?.features||[]).join('\n');
   $('productModal').classList.add('show');
   updateEditPhotoPreview();
@@ -2530,8 +2791,11 @@ $('saveProductBtn').onclick=async()=>{
 
   const name=$('fName').value.trim();
   const price=parseFloat(String($('fPrice').value).replace(',','.'));
+  const pricePJText=String($('fPricePJ').value||'').trim();
+  const pricePJ=pricePJText==='' ? null : parseFloat(pricePJText.replace(',','.'));
   if(!name)return alert('Informe o nome do produto.');
-  if(Number.isNaN(price)||price<0)return alert('Informe um preço válido.');
+  if(Number.isNaN(price)||price<0)return alert('Informe um preço PF válido.');
+  if(pricePJ!==null && (Number.isNaN(pricePJ)||pricePJ<0))return alert('Informe um preço PJ válido ou deixe em branco.');
 
   const id=$('editId').value||slug(name)+'-'+Date.now().toString().slice(-5);
   const old=CATALOG.find(x=>x.id===id);
@@ -2539,6 +2803,7 @@ $('saveProductBtn').onclick=async()=>{
     id,
     name,
     price,
+    pricePJ,
     type:$('fType').value,
     cat:$('fCat').value.trim()||'Sem categoria',
     brand:$('fBrand').value.trim(),
@@ -2597,6 +2862,7 @@ $('saveProductBtn').onclick=async()=>{
       const sameProduct=!!savedCheck
         && String(savedCheck.name||'')===String(product.name||'')
         && Number(savedCheck.price)===Number(product.price)
+        && (product.pricePJ===null ? (savedCheck.pricePJ===null || savedCheck.pricePJ==='' || typeof savedCheck.pricePJ==='undefined') : Number(savedCheck.pricePJ)===Number(product.pricePJ))
         && String(savedCheck.type||'')===String(product.type||'')
         && String(savedCheck.cat||'')===String(product.cat||'')
         && String(savedCheck.brand||'')===String(product.brand||'');
