@@ -1121,7 +1121,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.7';
+const TPX_FRONTEND_VERSION='1.5.8';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1248,7 +1248,12 @@ async function api(method,...args){
 
   if(
     method==='adminLoginQuick' ||
-    method==='resumeAdminSessionQuick' ||
+    method==='resumeAdminSessionQuick'
+  ){
+    return apiPostConfirmed(method,args);
+  }
+
+  if(
     method==='keepAdminSessionAlive' ||
     method==='endAdminSession'
   ){
@@ -1284,9 +1289,11 @@ function apiJsonp(method,args=[]){
   return new Promise((resolve,reject)=>{
     const callback='__tpx_jsonp_'+Date.now()+'_'+(++TPX_REQUEST_SEQ);
     const script=document.createElement('script');
-    const timeoutMs=(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'||method==='keepAdminSessionAlive'||method==='getVersionInfo')
-      ? 15000
-      : method==='getCatalog'
+    const timeoutMs=method==='getOperationStatus'
+      ? 4500
+      : (method==='adminLoginQuick'||method==='resumeAdminSessionQuick'||method==='keepAdminSessionAlive'||method==='getVersionInfo')
+        ? 15000
+        : method==='getCatalog'
         ? 22000
         : (method==='getImageMap'||method==='getVideoMap')
           ? 28000
@@ -1369,7 +1376,11 @@ function apiPostConfirmed(method,args){
     let settled=false;
     let pollTimer=null;
     const startedAt=Date.now();
-    const maxWaitMs=method==='identifyChairPhoto'?150000:45000;
+    const maxWaitMs=method==='identifyChairPhoto'
+      ? 150000
+      : (method==='adminLoginQuick'||method==='resumeAdminSessionQuick')
+        ? 30000
+        : 45000;
 
     function cleanup(){
       if(pollTimer) clearTimeout(pollTimer);
@@ -1432,11 +1443,17 @@ function apiPostConfirmed(method,args){
       }
 
       if(Date.now()-startedAt>=maxWaitMs){
-        fail(new Error(method==='identifyChairPhoto'?'A identificação demorou além do limite. Tente novamente com uma foto mais próxima e bem iluminada.':'A operação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
+        if(method==='identifyChairPhoto'){
+          fail(new Error('A identificação demorou além do limite. Tente novamente com uma foto mais próxima e bem iluminada.'));
+        }else if(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'){
+          fail(new Error('O celular não recebeu a confirmação do login. Verifique se a implantação do Apps Script está em v1.5.8 e tente novamente.'));
+        }else{
+          fail(new Error('A operação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
+        }
         return;
       }
 
-      pollTimer=setTimeout(pollReceipt,850);
+      pollTimer=setTimeout(pollReceipt,450);
     }
 
     window.addEventListener('message',onMessage);
@@ -2873,7 +2890,7 @@ async function submitAdminLogin(){
   }catch(e){
     adminMode=false;adminPin='';clearStoredAdminSession();
     const msg=String(e&&e.message?e.message:e);
-    $('loginError').textContent='Não foi possível validar o acesso no celular. '+msg+' Atualize a página e tente novamente.';
+    $('loginError').textContent='Não foi possível confirmar o acesso no celular. '+msg+' Atualize a página e tente novamente.';
   }finally{
     $('confirmAdminLogin').disabled=false;
   }
