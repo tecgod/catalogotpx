@@ -109,6 +109,38 @@ h1{font-family:Georgia,serif;font-weight:400;margin:0;font-size:2rem} .tag{color
   .edit-photo-frame{height:180px}
 }
  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} .dialog .field{margin-bottom:10px} .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+/* Galeria do produto: no card fica apenas a foto principal.
+   As fotos extras aparecem somente no modal, sobrepostas e navegadas lateralmente. */
+.thumb-gallery{width:100%;height:100%;position:relative;overflow:hidden}
+.thumb-gallery-main{width:100%;height:100%;position:relative;cursor:pointer}
+.thumb-gallery-main img{width:100%;height:100%;object-fit:contain;object-position:center;padding:6px;border:1px solid var(--line);background:#f7f6f3;display:block}
+.thumb-gallery-badge{position:absolute;right:6px;bottom:6px;background:rgba(15,15,15,.78);color:#fff;border-radius:999px;padding:4px 7px;font-size:.68rem;font-weight:700;pointer-events:none}
+
+.gallery-modal{position:fixed;inset:0;background:rgba(10,10,10,.94);display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
+.gallery-modal.show{display:flex}
+.gallery-dialog{width:min(980px,100%);height:min(90vh,760px);position:relative;display:flex;flex-direction:column;gap:10px}
+.gallery-close{position:absolute;right:4px;top:-4px;z-index:5;border:0;background:rgba(0,0,0,.55);color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.8rem;cursor:pointer}
+.gallery-title{color:#fff;font-size:1rem;font-weight:700;padding:4px 54px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-viewport{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:12px;background:#111}
+.gallery-strip{width:100%;height:100%;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.gallery-strip::-webkit-scrollbar{display:none}
+.gallery-slide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;position:relative}
+.gallery-slide img{width:100%;height:100%;object-fit:contain;display:block}
+.gallery-label{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;border-radius:999px;padding:5px 10px;font-size:.78rem;white-space:nowrap}
+.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:0;background:rgba(0,0,0,.58);color:#fff;font-size:2rem;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+.gallery-arrow.prev{left:10px}.gallery-arrow.next{right:10px}
+.gallery-counter{text-align:center;color:#fff;font-size:.8rem;min-height:20px}
+@media(max-width:650px){
+  .thumb-gallery-main img{padding:4px}
+  .gallery-modal{padding:0}
+  .gallery-dialog{width:100%;height:100%;max-height:none}
+  .gallery-viewport{border-radius:0}
+  .gallery-title{padding:12px 58px 0 12px}
+  .gallery-close{right:10px;top:8px}
+  .gallery-arrow{width:40px;height:40px;font-size:1.7rem}
+}
+
 .zoom{position:fixed;inset:0;background:rgba(15,15,15,.93);display:none;align-items:center;justify-content:center;z-index:60;padding:20px} .zoom.show{display:flex} .zoom img{max-width:100%;max-height:90vh;object-fit:contain} .zoom button{position:absolute;top:15px;right:20px;background:none;border:0;color:white;font-size:2rem}
 .status{font-size:.78rem;color:var(--soft);margin-left:auto}.version-badge{font-size:.72rem;color:var(--soft);margin-top:6px}.security-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.security-card{border:1px solid var(--line);padding:12px;background:#faf9f6}.security-card strong{display:block;margin-bottom:5px}.backup-list,.trash-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}.backup-row,.trash-row{border:1px solid var(--line);padding:10px;display:flex;justify-content:space-between;gap:10px;align-items:center}.small{font-size:.76rem;color:var(--soft)}
 @media(max-width:650px){
@@ -948,6 +980,20 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
 <div class="dialog-actions"><button class="btn" id="closeSecurityBtn">Fechar</button></div>
 </div></div>
 
+
+<div class="gallery-modal" id="productGalleryModal" aria-hidden="true">
+  <div class="gallery-dialog">
+    <button class="gallery-close" id="productGalleryClose" type="button" aria-label="Fechar">&times;</button>
+    <div class="gallery-title" id="productGalleryTitle"></div>
+    <div class="gallery-viewport">
+      <div class="gallery-strip" id="productGalleryStrip"></div>
+      <button class="gallery-arrow prev" id="productGalleryPrev" type="button" aria-label="Foto anterior">‹</button>
+      <button class="gallery-arrow next" id="productGalleryNext" type="button" aria-label="Próxima foto">›</button>
+    </div>
+    <div class="gallery-counter" id="productGalleryCounter"></div>
+  </div>
+</div>
+
 <div class="zoom" id="zoom"><button id="zoomClose">&times;</button><img id="zoomImg"></div>
 
 <script>
@@ -1197,7 +1243,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.5';
+const TPX_FRONTEND_VERSION='1.6.6';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -2066,35 +2112,77 @@ async function ensureProductReferenceImagesLoaded(p){
   }
 }
 
+let PRODUCT_GALLERY_STATE={sources:[],index:0,title:''};
+
+function updateProductGalleryModal(){
+  const strip=$('productGalleryStrip');
+  const sources=PRODUCT_GALLERY_STATE.sources||[];
+  const total=sources.length;
+  if(!strip) return;
+  const width=Math.max(1,strip.clientWidth);
+  const idx=Math.max(0,Math.min(total-1,Math.round(strip.scrollLeft/width)));
+  PRODUCT_GALLERY_STATE.index=idx;
+  $('productGalleryCounter').textContent=total ? `${idx+1} / ${total}` : '';
+  $('productGalleryPrev').style.display=total>1?'flex':'none';
+  $('productGalleryNext').style.display=total>1?'flex':'none';
+}
+
+function openProductGallery(p,startIndex=0){
+  const sources=productGallerySources(p);
+  if(!sources.length) return;
+  PRODUCT_GALLERY_STATE={sources:sources,index:Math.max(0,Math.min(sources.length-1,startIndex)),title:p.name||''};
+  $('productGalleryTitle').textContent=p.name||'';
+  const strip=$('productGalleryStrip');
+  strip.innerHTML='';
+  sources.forEach(src=>{
+    const slide=document.createElement('div');slide.className='gallery-slide';
+    const im=document.createElement('img');im.src=src.url;im.alt=(p.name||'Produto')+' - '+src.label;im.loading='eager';
+    const label=document.createElement('div');label.className='gallery-label';label.textContent=src.label;
+    slide.append(im,label);strip.appendChild(slide);
+  });
+  $('productGalleryModal').classList.add('show');
+  $('productGalleryModal').setAttribute('aria-hidden','false');
+  requestAnimationFrame(()=>{
+    strip.scrollLeft=PRODUCT_GALLERY_STATE.index*Math.max(1,strip.clientWidth);
+    updateProductGalleryModal();
+  });
+}
+
+function closeProductGallery(){
+  $('productGalleryModal').classList.remove('show');
+  $('productGalleryModal').setAttribute('aria-hidden','true');
+  $('productGalleryStrip').innerHTML='';
+  PRODUCT_GALLERY_STATE={sources:[],index:0,title:''};
+}
+
 function buildProductGallery(p,adminModeNow){
   const wrap=document.createElement('div');
   wrap.className='thumb-gallery';
   const sources=productGallerySources(p);
-  // Mesmo que o cache geral ainda esteja vazio, busca as fotos extras deste produto.
+
+  // Se as referências ainda não chegaram, busca sem bloquear a renderização do card.
   if(!REFERENCE_IMAGES[p.img] || !REFERENCE_IMAGES[p.img].refs || !Object.keys(REFERENCE_IMAGES[p.img].refs).length){
     setTimeout(()=>ensureProductReferenceImagesLoaded(p),0);
   }
+
   if(!sources.length){
-    const ph=document.createElement('div');ph.className='thumb-empty';ph.textContent=adminModeNow?'Enviar foto':'Sem foto';ph.onclick=()=>{if(adminModeNow)choosePhoto(p)};wrap.appendChild(ph);return wrap;
+    const ph=document.createElement('div');
+    ph.className='thumb-empty';
+    ph.textContent=adminModeNow?'Enviar foto':'Sem foto';
+    ph.onclick=()=>{if(adminModeNow)choosePhoto(p)};
+    wrap.appendChild(ph);
+    return wrap;
   }
-  const strip=document.createElement('div');strip.className='thumb-gallery-strip';
-  const count=document.createElement('div');count.className='thumb-gallery-count';count.textContent='1/'+sources.length;
-  sources.forEach((src,idx)=>{
-    const slide=document.createElement('div');slide.className='thumb-gallery-slide';
-    const im=document.createElement('img');im.className='thumb';im.src=src.url;im.alt=p.name+' - '+src.label;im.loading='lazy';im.onclick=()=>openZoom(src.url);
-    slide.appendChild(im);
-    if(sources.length>1){const label=document.createElement('div');label.className='thumb-gallery-label';label.textContent=src.label;slide.appendChild(label);}
-    strip.appendChild(slide);
-  });
-  wrap.appendChild(strip);
+
+  // No card fica somente a foto principal. As demais só aparecem ao abrir o modal.
+  const main=document.createElement('div');main.className='thumb-gallery-main';
+  const im=document.createElement('img');im.className='thumb';im.src=sources[0].url;im.alt=p.name;im.loading='lazy';
+  main.appendChild(im);
   if(sources.length>1){
-    wrap.appendChild(count);
-    const update=()=>{const idx=Math.max(0,Math.min(sources.length-1,Math.round(strip.scrollLeft/Math.max(1,strip.clientWidth))));count.textContent=(idx+1)+'/'+sources.length;};
-    strip.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});
-    const prev=document.createElement('button');prev.type='button';prev.className='thumb-gallery-arrow prev';prev.textContent='‹';prev.onclick=e=>{e.stopPropagation();strip.scrollBy({left:-strip.clientWidth,behavior:'smooth'});};
-    const next=document.createElement('button');next.type='button';next.className='thumb-gallery-arrow next';next.textContent='›';next.onclick=e=>{e.stopPropagation();strip.scrollBy({left:strip.clientWidth,behavior:'smooth'});};
-    wrap.append(prev,next);
+    const badge=document.createElement('div');badge.className='thumb-gallery-badge';badge.textContent=`📷 ${sources.length}`;main.appendChild(badge);
   }
+  main.onclick=()=>openProductGallery(p,0);
+  wrap.appendChild(main);
   return wrap;
 }
 
@@ -3462,6 +3550,19 @@ function openZoom(src){
 $('zoomClose').onclick=closeZoom;
 $('zoom').onclick=e=>{if(e.target===$('zoom'))closeZoom();};
 
+$('productGalleryClose').onclick=closeProductGallery;
+$('productGalleryModal').onclick=e=>{if(e.target===$('productGalleryModal'))closeProductGallery();};
+$('productGalleryStrip').addEventListener('scroll',()=>requestAnimationFrame(updateProductGalleryModal),{passive:true});
+$('productGalleryPrev').onclick=()=>{
+  const strip=$('productGalleryStrip');
+  strip.scrollBy({left:-Math.max(1,strip.clientWidth),behavior:'smooth'});
+};
+$('productGalleryNext').onclick=()=>{
+  const strip=$('productGalleryStrip');
+  strip.scrollBy({left:Math.max(1,strip.clientWidth),behavior:'smooth'});
+};
+
+
 
 let catalogResizeTimer=null;
 window.addEventListener('resize',()=>{
@@ -3567,33 +3668,26 @@ renderVersionBadge();
 async function initializeApp(){
   applyPriceVisibility();
 
-  const resumed=await resumeStoredAdminSession();
+  // O catálogo público abre primeiro. Restaurar uma sessão gerencial antiga
+  // nunca pode manter o celular parado em 0%.
+  setSyncProgress(5,'Abrindo catálogo...');
+  await loadAll(false);
+  verifyBackendVersionInBackground();
 
-  if(resumed){
-    try{
-      const media=await Promise.allSettled([
-        apiJsonp('getImageMap',[]),
-        apiJsonp('getVideoMap',[])
-      ]);
-      if(media[0].status==='fulfilled'){
-        IMAGES=media[0].value||{};
-        saveCachedImageMap(IMAGES);
+  // Tenta restaurar a sessão gerencial somente depois que o catálogo já está utilizável.
+  // Essa etapa é propositalmente assíncrona e não bloqueia a tela pública.
+  if(getStoredAdminSession()){
+    setTimeout(async()=>{
+      try{
+        const resumed=await resumeStoredAdminSession();
+        if(resumed){
+          if(loadProductDraft()) restoreProductDraft();
+        }
+      }catch(e){
+        console.warn('Restauração gerencial em segundo plano falhou:',e);
       }
-      if(media[1].status==='fulfilled'){
-        VIDEOS=media[1].value||{};
-        saveCachedVideoMap(VIDEOS);
-      }
-      render();
-    }catch(e){}
-
-    if(loadProductDraft()) restoreProductDraft();
-    return;
-  }
-
-  await loadAll();
-verifyBackendVersionInBackground();
-
-  if(loadProductDraft()){
+    },150);
+  }else if(loadProductDraft()){
     $('loginError').textContent='Existe uma edição não concluída. Digite a senha gerencial para continuar exatamente de onde parou.';
     $('adminPasswordInput').value='';
     $('adminLoginModal').classList.add('show');
