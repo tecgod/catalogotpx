@@ -1122,7 +1122,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.0';
+const TPX_FRONTEND_VERSION='1.5.1';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1244,7 +1244,7 @@ async function api(method,...args){
     return apiJsonp(method,args);
   }
 
-  if(method==='saveProductWithVideo'){
+  if(method==='saveProductWithVideo' || method==='identifyChairPhoto'){
     return apiPostConfirmed(method,args);
   }
 
@@ -1338,7 +1338,7 @@ function apiPostConfirmed(method,args){
     let settled=false;
     let pollTimer=null;
     const startedAt=Date.now();
-    const maxWaitMs=45000;
+    const maxWaitMs=method==='identifyChairPhoto'?150000:45000;
 
     function cleanup(){
       if(pollTimer) clearTimeout(pollTimer);
@@ -1392,7 +1392,7 @@ function apiPostConfirmed(method,args){
 
         if(status && status.state==='error'){
           const payload=status.payload||{};
-          fail(new Error(payload.error||'Não foi possível concluir a gravação.'));
+          fail(new Error(payload.error||'Não foi possível concluir a operação.'));
           return;
         }
       }catch(e){
@@ -1401,7 +1401,7 @@ function apiPostConfirmed(method,args){
       }
 
       if(Date.now()-startedAt>=maxWaitMs){
-        fail(new Error('A gravação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
+        fail(new Error(method==='identifyChairPhoto'?'A identificação demorou além do limite. Tente novamente com uma foto mais próxima e bem iluminada.':'A operação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
         return;
       }
 
@@ -1910,8 +1910,29 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;',
 const TPX_IDENTIFIER_PIN_KEY='tpx_identifier_price_pin_session_v1';
 let identifierCurrentProduct=null;
 let identifierPriceKind='PF';
+let identifierProgressTimers=[];
+
+function clearIdentifierProgressTimers(){
+  identifierProgressTimers.forEach(t=>clearTimeout(t));
+  identifierProgressTimers=[];
+}
+
+function setIdentifierProgress(text){
+  const el=$('identifierLoadingText');
+  if(el) el.textContent=text;
+}
+
+function startIdentifierProgress(){
+  clearIdentifierProgressTimers();
+  setIdentifierProgress('Enviando a foto para análise...');
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Analisando formato, encosto, braços e base...'),5000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('Comparando com os modelos cadastrados...'),12000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A IA ainda está comparando as referências. Só mais um momento...'),30000));
+  identifierProgressTimers.push(setTimeout(()=>setIdentifierProgress('A identificação está demorando mais que o normal. O sistema continua consultando o resultado...'),60000));
+}
 
 function resetIdentifierView(){
+  clearIdentifierProgressTimers();
   identifierCurrentProduct=null;
   identifierPriceKind='PF';
   $('identifierStart').style.display='block';
@@ -1933,6 +1954,7 @@ function openIdentifier(){
 }
 
 function closeIdentifier(){
+  clearIdentifierProgressTimers();
   $('identifierScreen').classList.remove('show');
   $('identifierScreen').setAttribute('aria-hidden','true');
   document.body.style.overflow='';
@@ -1965,6 +1987,7 @@ async function startIdentifierCamera(){
 }
 
 function showIdentifierError(message){
+  clearIdentifierProgressTimers();
   $('identifierStart').style.display='none';
   $('identifierLoading').classList.remove('show');
   $('identifierResult').classList.remove('show');
@@ -1993,6 +2016,7 @@ function setIdentifierPrice(kind){
 }
 
 function renderIdentifierResult(result){
+  clearIdentifierProgressTimers();
   const p=result && result.product;
   if(!p) throw new Error('O identificador não retornou um produto válido.');
   identifierCurrentProduct=p;
@@ -2021,6 +2045,7 @@ async function identifySelectedPhoto(file){
   $('identifierPreview').src=localUrl;
   $('identifierPreviewBox').classList.add('show');
   $('identifierLoading').classList.add('show');
+  startIdentifierProgress();
   try{
     const pin=await ensureIdentifierPin();
     if(!pin) throw new Error('Identificação cancelada.');
@@ -2030,6 +2055,7 @@ async function identifySelectedPhoto(file){
   }catch(e){
     showIdentifierError(e.message||String(e));
   }finally{
+    clearIdentifierProgressTimers();
     $('identifierLoading').classList.remove('show');
     setTimeout(()=>URL.revokeObjectURL(localUrl),3000);
     $('identifierInput').value='';
