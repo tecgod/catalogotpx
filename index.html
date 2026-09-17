@@ -809,7 +809,7 @@ body.hide-prices .card .price.price-revealed{visibility:visible}
     <p>Primeiro faça a busca e os filtros desejados. Depois clique em “Imprimir seleção”. É possível escolher foto, preço, NRs e detalhes, definir a orientação Retrato ou Paisagem e escolher o modo Colorido, Escala de cinza ou Preto e branco. No modo Paisagem os cards ganham mais largura e a área da foto é ampliada. No modo Colorido o preço mantém o vermelho usado no catálogo. A impressão contém apenas os produtos selecionados pelos filtros.</p>
 
     <h3>7. Identificador de cadeiras</h3>
-    <p>No celular, use “Identificar cadeira” para abrir a câmera traseira. O resultado mostra o produto, preço PF por padrão, opção discreta PF/PJ e as características cadastradas. Na primeira identificação da sessão, a senha de consulta protege o uso da IA.</p>
+    <p>No celular, use “Identificar cadeira” para abrir diretamente a câmera traseira, sem senha. O resultado mostra o produto, preço PF por padrão, opção discreta PF/PJ e as características cadastradas.</p>
 
     <h3>8. Área gerencial</h3>
     <p>O botão “Gerenciar catálogo” abre o acesso restrito. Após autenticação, é possível cadastrar produtos, alterar nome, preço, tipo, categoria, marca, características, classificação de NRs, confiança ergonômica e status da análise.</p>
@@ -1129,7 +1129,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.3';
+const TPX_FRONTEND_VERSION='1.5.4';
 const TPX_CATALOG_CACHE_KEY='tpx_catalog_cache_v2';
 const TPX_DB_CACHE_KEY='tpx_db_version_cache_v1';
 
@@ -1914,7 +1914,6 @@ function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;',
 
 
 
-const TPX_IDENTIFIER_PIN_KEY='tpx_identifier_price_pin_session_v1';
 let identifierCurrentProduct=null;
 let identifierLastResult=null;
 let identifierPriceKind='PF';
@@ -1977,29 +1976,9 @@ function closeIdentifier(){
   if($('identifierInput')) $('identifierInput').value='';
 }
 
-async function ensureIdentifierPin(){
-  let pin='';
-  try{pin=sessionStorage.getItem(TPX_IDENTIFIER_PIN_KEY)||'';}catch(e){}
-  if(pin){
-    try{if(await apiJsonp('verifyPricePin',[pin])) return pin;}catch(e){}
-    try{sessionStorage.removeItem(TPX_IDENTIFIER_PIN_KEY);}catch(e){}
-  }
-  pin=prompt('Para proteger o uso da identificação por IA, digite a senha de consulta de preço. Você precisará informar apenas uma vez nesta sessão:')||'';
-  if(!pin) return '';
-  let ok=false;
-  try{ok=await apiJsonp('verifyPricePin',[pin]);}catch(e){throw new Error('Não foi possível validar a senha de consulta.');}
-  if(!ok) throw new Error('Senha de consulta incorreta.');
-  try{sessionStorage.setItem(TPX_IDENTIFIER_PIN_KEY,pin);}catch(e){}
-  return pin;
-}
-
-async function startIdentifierCamera(){
-  try{
-    await ensureIdentifierPin();
-    $('identifierInput').click();
-  }catch(e){
-    showIdentifierError(e.message||String(e));
-  }
+function startIdentifierCamera(){
+  $('identifierError').classList.remove('show');
+  $('identifierInput').click();
 }
 
 function showIdentifierError(message){
@@ -2144,10 +2123,8 @@ async function identifySelectedPhoto(file){
   $('identifierLoading').classList.add('show');
   startIdentifierProgress();
   try{
-    const pin=await ensureIdentifierPin();
-    if(!pin) throw new Error('Identificação cancelada.');
     const dataUrl=await optimized(file,900,.70);
-    const result=await api('identifyChairPhoto',dataUrl,pin);
+    const result=await api('identifyChairPhoto',dataUrl);
     renderIdentifierResult(result);
   }catch(e){
     showIdentifierError(e.message||String(e));
