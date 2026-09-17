@@ -1029,7 +1029,7 @@ function markAdminActivity(){
 async function keepAdminSessionAlive(){
   if(!adminMode || !adminPin || document.hidden) return false;
   try{
-    const status=await apiJsonp('keepAdminSessionAlive',[adminPin]);
+    const status=await api('keepAdminSessionAlive',adminPin);
     if(status && status.valid){
       adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
       markAdminActivity();
@@ -1059,7 +1059,7 @@ async function ensureAdminSession(){
   if(!adminMode || !adminPin) throw new Error('Acesso gerencial não está ativo.');
 
   try{
-    const status=await apiJsonp('keepAdminSessionAlive',[adminPin]);
+    const status=await api('keepAdminSessionAlive',adminPin);
     if(status && status.valid){
       adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
       markAdminActivity();
@@ -1095,7 +1095,7 @@ async function resumeStoredAdminSession(){
   const token=getStoredAdminSession();
   if(!token) return false;
   try{
-    const login=await apiJsonp('resumeAdminSessionQuick',[token]);
+    const login=await api('resumeAdminSessionQuick',token);
     if(!login || login.valid!==true){
       clearStoredAdminSession();
       return false;
@@ -1121,7 +1121,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.5.6';
+const TPX_FRONTEND_VERSION='1.5.7';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1247,14 +1247,19 @@ async function api(method,...args){
   }
 
   if(
+    method==='adminLoginQuick' ||
+    method==='resumeAdminSessionQuick' ||
+    method==='keepAdminSessionAlive' ||
+    method==='endAdminSession'
+  ){
+    return apiPost(method,args);
+  }
+
+  if(
     method==='verifyPricePin' ||
     method==='verifyAdminPin' ||
     method==='adminLogin' ||
-    method==='adminLoginQuick' ||
     method==='resumeAdminSession' ||
-    method==='resumeAdminSessionQuick' ||
-    method==='keepAdminSessionAlive' ||
-    method==='endAdminSession' ||
     method==='getOperationStatus'
   ){
     return apiJsonp(method,args);
@@ -1465,7 +1470,11 @@ function apiPost(method,args){
     input('method',method);
     input('args',JSON.stringify(args||[]));
 
-    const postTimeoutMs=method==='identifyChairPhoto'?120000:((method==='saveProductWithVideo'||method==='saveProductImage')?75000:60000);
+    const postTimeoutMs=(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'||method==='keepAdminSessionAlive'||method==='endAdminSession')
+      ? 22000
+      : method==='identifyChairPhoto'
+        ? 120000
+        : ((method==='saveProductWithVideo'||method==='saveProductImage')?75000:60000);
     const timer=setTimeout(()=>{
       cleanup();
       reject(new Error('Tempo esgotado ao executar a operação.'));
@@ -2835,7 +2844,7 @@ async function submitAdminLogin(){
   $('loginError').textContent='Validando senha...';
   $('confirmAdminLogin').disabled=true;
   try{
-    const login=await apiJsonp('adminLoginQuick',[pin]);
+    const login=await api('adminLoginQuick',pin);
     if(!login || login.valid!==true){
       $('loginError').textContent='Senha gerencial incorreta.';
       $('adminPasswordInput').select();
@@ -2863,7 +2872,8 @@ async function submitAdminLogin(){
     refreshAdminCatalogQuietly();
   }catch(e){
     adminMode=false;adminPin='';clearStoredAdminSession();
-    $('loginError').textContent='Não foi possível validar o acesso. '+e.message;
+    const msg=String(e&&e.message?e.message:e);
+    $('loginError').textContent='Não foi possível validar o acesso no celular. '+msg+' Atualize a página e tente novamente.';
   }finally{
     $('confirmAdminLogin').disabled=false;
   }
