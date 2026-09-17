@@ -977,7 +977,11 @@ let adminKeepAliveTimer=null;
 let lastAdminActivityAt=Date.now();
 
 function getStoredAdminSession(){
-  try{return sessionStorage.getItem(TPX_ADMIN_SESSION_KEY)||'';}catch(e){return '';}
+  try{
+    const sessionToken=sessionStorage.getItem(TPX_ADMIN_SESSION_KEY)||'';
+    if(sessionToken) return sessionToken;
+  }catch(e){}
+  try{return localStorage.getItem(TPX_ADMIN_SESSION_KEY)||'';}catch(e){return '';}
 }
 
 function storeAdminSession(token,expiresAt){
@@ -985,11 +989,16 @@ function storeAdminSession(token,expiresAt){
     if(token) sessionStorage.setItem(TPX_ADMIN_SESSION_KEY,String(token));
     else sessionStorage.removeItem(TPX_ADMIN_SESSION_KEY);
   }catch(e){}
+  try{
+    if(token) localStorage.setItem(TPX_ADMIN_SESSION_KEY,String(token));
+    else localStorage.removeItem(TPX_ADMIN_SESSION_KEY);
+  }catch(e){}
   adminSessionExpiresAt=Number(expiresAt)||0;
 }
 
 function clearStoredAdminSession(){
   try{sessionStorage.removeItem(TPX_ADMIN_SESSION_KEY);}catch(e){}
+  try{localStorage.removeItem(TPX_ADMIN_SESSION_KEY);}catch(e){}
   adminSessionExpiresAt=0;
 }
 
@@ -1093,12 +1102,38 @@ function stopAdminKeepAlive(){
 }
 
 async function ensureAdminSession(){
-  if(!adminMode || !adminPin) throw new Error('Acesso gerencial não está ativo.');
+  // Ao abrir a câmera no celular o navegador pode suspender a página e perder
+  // as variáveis em memória. Recupera a sessão salva antes de considerar o acesso inativo.
+  if(!adminMode || !adminPin){
+    const storedToken=getStoredAdminSession();
+    if(storedToken){
+      try{
+        const login=await api('resumeAdminSessionQuick',storedToken);
+        if(login && login.valid===true){
+          adminPin=login.sessionToken||storedToken;
+          adminSessionExpiresAt=Number(login.expiresAt)||0;
+          adminMode=true;
+          storeAdminSession(adminPin,adminSessionExpiresAt);
+          $('adminBtn').textContent='Sair do gerenciamento';
+          $('adminBtn').classList.add('active');
+          $('addBtn').style.display='inline-block';
+          $('securityBtn').style.display='inline-block';
+          $('adminNote').classList.add('show');
+          startAdminKeepAlive();
+        }
+      }catch(e){
+        console.warn('Não foi possível recuperar a sessão após voltar da câmera:',e);
+      }
+    }
+  }
+
+  if(!adminMode || !adminPin) throw new Error('Acesso gerencial não está ativo. Entre novamente em Gerenciar catálogo.');
 
   try{
     const status=await api('keepAdminSessionAlive',adminPin);
     if(status && status.valid){
       adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
+      storeAdminSession(adminPin,adminSessionExpiresAt);
       markAdminActivity();
       return true;
     }
@@ -1158,7 +1193,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.0';
+const TPX_FRONTEND_VERSION='1.6.1';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -3018,8 +3053,11 @@ async function saveExtraPhotoFile(file){
   if(!file || !extraPhotosProductKey || !extraPhotosCurrentSlot) return;
   const slot=extraPhotosCurrentSlot;
   try{
+    // Importante no celular: ao voltar da câmera, recupera a sessão antes de montar a chamada.
+    await ensureAdminSession();
+    const activeCredential=adminPin;
     const dataUrl=await optimized(file,1400,.84);
-    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',adminPin);
+    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',activeCredential);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
     renderExtraPhotos();
     alert('Foto adicionada com sucesso. A foto principal do catálogo foi mantida.');
@@ -3035,7 +3073,9 @@ async function setExtraPhotoAsMain(slot){
   if(!extraPhotosProductKey) return;
   if(!confirm('Usar esta foto como principal do catálogo?')) return;
   try{
-    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[],slot,adminPin);
+    await ensureAdminSession();
+    const activeCredential=adminPin;
+    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[],slot,activeCredential);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||slot,refs:(result&&result.refs)||extraPhotosState.refs||{}};
     const ref=extraPhotosState.refs[slot];
     if(ref&&ref.url){
