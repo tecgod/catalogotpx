@@ -1073,18 +1073,22 @@ function markAdminActivity(){
 }
 
 async function keepAdminSessionAlive(){
-  if(!adminMode || !adminPin || document.hidden) return false;
+  if(!adminMode || !adminPin || document.hidden) return null;
   try{
     const status=await api('keepAdminSessionAlive',adminPin);
     if(status && status.valid){
       adminSessionExpiresAt=Number(status.expiresAt)||adminSessionExpiresAt;
+      storeAdminSession(adminPin,adminSessionExpiresAt);
       markAdminActivity();
       return true;
     }
+    if(status && status.valid===false) return false;
+    return null;
   }catch(e){
-    console.warn('Não foi possível renovar a sessão gerencial:',e);
+    console.warn('Não foi possível renovar a sessão gerencial agora:',e);
+    // Falha de rede/retorno no celular não significa que a sessão expirou.
+    return null;
   }
-  return false;
 }
 
 function startAdminKeepAlive(){
@@ -1193,7 +1197,7 @@ async function resumeStoredAdminSession(){
 }
 
 
-const TPX_FRONTEND_VERSION='1.6.1';
+const TPX_FRONTEND_VERSION='1.6.2';
 
 let TPX_BACKEND_VERSION='';
 function renderVersionBadge(){
@@ -1325,10 +1329,11 @@ async function api(method,...args){
     return apiPostConfirmed(method,args);
   }
 
-  if(
-    method==='keepAdminSessionAlive' ||
-    method==='endAdminSession'
-  ){
+  if(method==='keepAdminSessionAlive'){
+    return apiPostConfirmed(method,args);
+  }
+
+  if(method==='endAdminSession'){
     return apiPost(method,args);
   }
 
@@ -1518,7 +1523,7 @@ function apiPostConfirmed(method,args){
         if(method==='identifyChairPhoto'){
           fail(new Error('A identificação demorou além do limite. Tente novamente com uma foto mais próxima e bem iluminada.'));
         }else if(method==='adminLoginQuick'||method==='resumeAdminSessionQuick'){
-          fail(new Error('O celular não recebeu a confirmação do login. Verifique se a implantação do Apps Script está em v1.5.8 e tente novamente.'));
+          fail(new Error('O celular não recebeu a confirmação do login. Verifique se a implantação do Apps Script está atualizada e tente novamente.'));
         }else{
           fail(new Error('A operação pode ter sido concluída, mas não foi possível receber a confirmação do servidor.'));
         }
@@ -3053,16 +3058,23 @@ async function saveExtraPhotoFile(file){
   if(!file || !extraPhotosProductKey || !extraPhotosCurrentSlot) return;
   const slot=extraPhotosCurrentSlot;
   try{
-    // Importante no celular: ao voltar da câmera, recupera a sessão antes de montar a chamada.
-    await ensureAdminSession();
-    const activeCredential=adminPin;
+    // No celular, voltar da câmera pode disparar visibilitychange.
+    // Usa diretamente o token atual ou o token persistido, sem uma validação extra antes do upload.
+    const activeCredential=String(adminPin||getStoredAdminSession()||'').trim();
+    if(!activeCredential){
+      throw new Error('Sessão gerencial não encontrada. Entre novamente em Gerenciar catálogo.');
+    }
+    adminPin=activeCredential;
+    adminMode=true;
     const dataUrl=await optimized(file,1400,.84);
-    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',activeCredential);
+    const result=await apiPostConfirmed('saveProductReferenceImages',[extraPhotosProductKey,[{slot:slot,originalName:file.name,dataUrl:dataUrl}],'',activeCredential]);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||'',refs:(result&&result.refs)||{}};
     renderExtraPhotos();
     alert('Foto adicionada com sucesso. A foto principal do catálogo foi mantida.');
-  }catch(err){ alert('Não foi possível adicionar a foto. '+err.message); }
-  finally{
+  }catch(err){
+    const msg=String(err&&err.message?err.message:err);
+    alert('Não foi possível adicionar a foto. '+msg);
+  }finally{
     extraPhotosCurrentSlot='';
     $('photoExtraCameraInput').value='';
     $('photoExtraGalleryInput').value='';
@@ -3073,9 +3085,11 @@ async function setExtraPhotoAsMain(slot){
   if(!extraPhotosProductKey) return;
   if(!confirm('Usar esta foto como principal do catálogo?')) return;
   try{
-    await ensureAdminSession();
-    const activeCredential=adminPin;
-    const result=await api('saveProductReferenceImages',extraPhotosProductKey,[],slot,activeCredential);
+    const activeCredential=String(adminPin||getStoredAdminSession()||'').trim();
+    if(!activeCredential) throw new Error('Sessão gerencial não encontrada. Entre novamente em Gerenciar catálogo.');
+    adminPin=activeCredential;
+    adminMode=true;
+    const result=await apiPostConfirmed('saveProductReferenceImages',[extraPhotosProductKey,[],slot,activeCredential]);
     extraPhotosState={primarySlot:(result&&result.primarySlot)||slot,refs:(result&&result.refs)||extraPhotosState.refs||{}};
     const ref=extraPhotosState.refs[slot];
     if(ref&&ref.url){
@@ -3330,7 +3344,7 @@ document.addEventListener('visibilitychange',async()=>{
     const idleMs=Date.now()-lastAdminActivityAt;
     if(idleMs>2*60*1000){
       const ok=await keepAdminSessionAlive();
-      if(!ok){
+      if(ok===false){
         saveProductDraft();
         adminMode=false;
         adminPin='';
